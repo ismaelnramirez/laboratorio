@@ -374,25 +374,7 @@ function render() {
 }
 
 function renderLogin() {
-  return mostrarSignup ? `
-    <div class="login-wrap"><div class="login-card">
-      <div class="brand" style="border:none;padding:0 0 16px;"><div class="name">LabSys</div><div class="sub">Crear cuenta</div></div>
-      <form id="form-signup">
-        <label>Nombre completo</label>
-        <input type="text" name="nombre" required>
-        <label>Correo</label>
-        <input type="email" name="correo" required autocomplete="username">
-        <label>Contraseña</label>
-        <input type="password" name="password" required minlength="6" autocomplete="new-password">
-        ${loginError ? '<p class="refbox oor">'+loginError+'</p>' : ''}
-        <button class="btn" type="submit" style="width:100%;">Crear cuenta</button>
-      </form>
-      <p class="refbox" style="margin-top:14px;text-align:center;">
-        ¿Ya tienes cuenta? <span class="backlink" onclick="labsysToggleSignup(false)">Inicia sesión</span>
-      </p>
-      <p class="refbox" style="margin-top:6px;text-align:center;">Las cuentas nuevas nacen con rol "secretaria" — un administrador te asigna el rol correcto luego.</p>
-    </div></div>
-  ` : `
+  return `
     <div class="login-wrap"><div class="login-card">
       <div class="brand" style="border:none;padding:0 0 16px;"><div class="name">LabSys</div><div class="sub">Inicia sesión</div></div>
       <form id="form-login">
@@ -404,13 +386,12 @@ function renderLogin() {
         <button class="btn" type="submit" style="width:100%;">Entrar</button>
       </form>
       <p class="refbox" style="margin-top:14px;text-align:center;">
-        ¿Primera vez aquí? <span class="backlink" onclick="labsysToggleSignup(true)">Crea una cuenta</span>
+        ¿Necesitas una cuenta? Pídesela al administrador del laboratorio.
       </p>
     </div></div>
   `;
 }
 
-window.labsysToggleSignup = function(v) { mostrarSignup = v; loginError = ''; render(); };
 window.labsysLogout = async function() { await supabase.auth.signOut(); sesion = null; render(); };
 
 function renderView() {
@@ -588,7 +569,7 @@ function viewLaboratorio() {
 function viewUsuarios() {
   return `
     <h1>Usuarios</h1>
-    <p class="lead">Cada persona crea su propia cuenta desde la pantalla de inicio de sesión ("Crea una cuenta"). Aquí le asignas el rol correcto y puedes desactivarla si hace falta.</p>
+    <p class="lead">Agrega cuentas nuevas desde Supabase (Authentication → Users → Add user). Aquí solo asignas el rol correcto y puedes desactivarlas si hace falta.</p>
     <div class="card">
       <h2>Listado (${usuarios.length})</h2>
       ${usuarios.length === 0 ? '<div class="empty">Todavía no hay cuentas registradas.</div>' : `
@@ -1336,21 +1317,6 @@ function attachHandlers() {
     if (error) { loginError = 'Correo o contraseña incorrectos.'; render(); return; }
     const { data: { user } } = await supabase.auth.getUser();
     await onAuthed(user);
-  });
-
-  const fsg = document.getElementById('form-signup');
-  if (fsg) fsg.addEventListener('submit', async e => {
-    e.preventDefault();
-    const fd = new FormData(fsg);
-    const { error } = await supabase.auth.signUp({
-      email: fd.get('correo').trim(), password: fd.get('password'),
-      options: { data: { nombre: fd.get('nombre') } }
-    });
-    if (error) { loginError = error.message; render(); return; }
-    loginError = '';
-    mostrarSignup = false;
-    toast('Cuenta creada. Ya puedes iniciar sesión.');
-    render();
   });
 
   const fmp = document.getElementById('form-mi-password');
