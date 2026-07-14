@@ -121,6 +121,7 @@
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (function(){
 
@@ -180,6 +181,11 @@ function vistaInicial() {
 }
 
 async function init() {
+  const codigoVerificar = new URLSearchParams(window.location.search).get('verificar');
+  if (codigoVerificar) {
+    await mostrarVerificacionPublica(codigoVerificar);
+    return;
+  }
   const { data } = await supabase.auth.getSession();
   if (data.session) {
     await onAuthed(data.session.user);
@@ -189,6 +195,31 @@ async function init() {
   supabase.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT') { sesion = null; pacientes = []; ordenes = []; medicos = []; bitacora = []; render(); }
   });
+}
+
+async function mostrarVerificacionPublica(codigo) {
+  const root = document.getElementById('labsys-root');
+  root.innerHTML = '<div class="login-wrap"><div class="login-card"><p class="lead">Verificando…</p></div></div>';
+  const { data, error } = await supabase.rpc('verificar_informe', { p_codigo: codigo });
+  const resultado = (data && data[0]) || null;
+  const estadoTexto = { validada: 'Válido', entregada: 'Válido', anulada: 'Anulado' };
+  root.innerHTML = `
+    <div class="login-wrap"><div class="login-card">
+      <div class="brand" style="border:none;padding:0 0 16px;"><div class="name">LabSys</div><div class="sub">Verificación de informe</div></div>
+      ${(error || !resultado) ? `
+        <p class="refbox oor">No se encontró ningún informe con este código. Puede que el enlace esté mal escrito o el documento no sea válido.</p>
+      ` : `
+        <table><tbody>
+          <tr><td class="refbox">Laboratorio</td><td style="text-align:right;font-weight:600;">${resultado.laboratorio}</td></tr>
+          <tr><td class="refbox">Folio</td><td style="text-align:right;font-weight:600;">${resultado.folio}</td></tr>
+          <tr><td class="refbox">Paciente</td><td style="text-align:right;font-weight:600;">${resultado.paciente}</td></tr>
+          <tr><td class="refbox">Validado</td><td style="text-align:right;font-weight:600;">${resultado.fecha_validacion ? new Date(resultado.fecha_validacion).toLocaleString() : '—'}</td></tr>
+          <tr><td class="refbox">Estado</td><td style="text-align:right;"><span class="pill ${resultado.estado==='anulada'?'anulada':'validada'}">${estadoTexto[resultado.estado] || resultado.estado}</span></td></tr>
+        </tbody></table>
+        <p class="refbox" style="margin-top:14px;">Este documento fue emitido y validado por el laboratorio. Este resumen no incluye resultados clínicos por privacidad del paciente.</p>
+      `}
+    </div></div>
+  `;
 }
 
 async function onAuthed(user) {
@@ -231,6 +262,7 @@ async function fetchTodo() {
     medio_entrega: o.medio_entrega, medio_texto: o.medio_texto, receptor: o.receptor,
     entregado_por: o.entregado_por, fecha_entrega: o.fecha_entrega,
     motivo_anulacion: o.motivo_anulacion, anulada_por: o.anulada_por, fecha_anulacion: o.fecha_anulacion,
+    codigo_verificacion: o.codigo_verificacion,
     detalle: (o.orden_detalle || []).map(d => ({ ...d }))
   }));
   bitacora = [];
@@ -253,6 +285,15 @@ function logAccion(accion, detalle) {
   supabase.from('bitacora').insert({
     usuario: sesion.nombre, rol: sesion.rol, accion, detalle: detalle || ''
   }).then(() => {});
+}
+
+function qrTag(data, cellSize) {
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(data);
+    qr.make();
+    return qr.createImgTag(cellSize || 3, 4);
+  } catch (e) { return ''; }
 }
 
 function toast(msg) {
@@ -1049,6 +1090,11 @@ function viewInforme() {
         <div style="text-align:right">
           <div class="refbox">Folio #${String(orden.id).padStart(4,'0')}</div>
           <div class="refbox">${new Date(orden.fecha).toLocaleDateString()}</div>
+          ${orden.codigo_verificacion ? `
+          <div style="margin-top:6px;">
+            ${qrTag(window.location.origin + window.location.pathname + '?verificar=' + orden.codigo_verificacion, 3)}
+            <div class="refbox">Verificar autenticidad</div>
+          </div>` : ''}
         </div>
       </div>
       <p><strong>${pac.nombres} ${pac.apellidos}</strong> · ${edadTexto(pac.fnac)} · ${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}${orden.medico ? ' · Ref: '+orden.medico : ''}</p>
@@ -1638,8 +1684,12 @@ function attachHandlers() {
       const { error } = await supabase.from('orden_detalle').update({ estado: 'validada', validado_por: u, fecha_validacion: now }).eq('id', d.id);
       if (!error) { d.estado = 'validada'; d.validado_por = u; d.fecha_validacion = now; }
     }
-    await supabase.from('ordenes').update({ estado: 'validada', fecha_validacion: now }).eq('id', orden.id);
-    orden.estado = 'validada'; orden.fecha_validacion = now;
+    const patch = { estado: 'validada', fecha_validacion: now };
+    if (!orden.codigo_verificacion) {
+      patch.codigo_verificacion = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2))).replace(/-/g, '');
+    }
+    await supabase.from('ordenes').update(patch).eq('id', orden.id);
+    Object.assign(orden, patch);
     toast(aValidar.length + ' resultado(s) validados');
     logAccion('Validó orden', 'Folio #' + String(orden.id).padStart(4,'0') + ' — ' + aValidar.length + ' resultado(s)');
     setView('validacion');
