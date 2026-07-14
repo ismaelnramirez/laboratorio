@@ -977,7 +977,7 @@ function viewOrdenes() {
         ${ordenes.slice().reverse().map(o => {
           const pac = pacienteById(o.paciente_id);
           const clic = o.estado !== 'anulada';
-          const puedeAnular = o.estado !== 'anulada' && o.estado !== 'entregada';
+          const puedeAnular = o.estado !== 'anulada';
           return `<tr ${clic ? `class="clickrow" onclick="labsysSetView('captura','${o.id}')"` : ''}>
             <td>#${String(o.id).padStart(4,'0')}</td>
             <td>${pac ? pac.nombres+' '+pac.apellidos : '—'}</td>
