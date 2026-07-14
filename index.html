@@ -1195,12 +1195,14 @@ function viewInforme() {
       <h1>Informe / entrega</h1>
       <p class="lead">Órdenes validadas, listas para imprimir o entregar.</p>
       <div class="card">
+        <input type="text" id="buscador-informe" placeholder="Buscar por paciente o folio..." style="margin-bottom:14px;">
         ${validas.length === 0 ? '<div class="empty">Todavía no hay órdenes validadas.</div>' : `
-        <table><thead><tr><th>Folio</th><th>Paciente</th><th>Estado</th></tr></thead><tbody>
-        ${validas.map(o => {
+        <table id="tabla-informe"><thead><tr><th>Folio</th><th>Paciente</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
+        ${validas.slice().reverse().map(o => {
           const pac = pacienteById(o.paciente_id);
-          return `<tr class="clickrow" onclick="labsysSetView('informe','${o.id}')">
+          return `<tr class="clickrow" onclick="labsysSetView('informe','${o.id}')" data-busca="${(pac.nombres+' '+pac.apellidos+' #'+String(o.id).padStart(4,'0')).toLowerCase()}">
             <td>#${String(o.id).padStart(4,'0')}</td><td>${pac.nombres} ${pac.apellidos}</td>
+            <td class="refbox">${new Date(o.fecha).toLocaleDateString()}</td>
             <td><span class="pill ${o.estado}">${o.estado}</span></td></tr>`;
         }).join('')}
         </tbody></table>`}
@@ -1558,6 +1560,14 @@ function attachHandlers() {
       u.activo = nuevo;
       logAccion(nuevo ? 'Activó usuario' : 'Desactivó usuario', u.correo);
       render();
+    });
+  });
+
+  const buscadorInforme = document.getElementById('buscador-informe');
+  if (buscadorInforme) buscadorInforme.addEventListener('input', () => {
+    const q = buscadorInforme.value.trim().toLowerCase();
+    document.querySelectorAll('#tabla-informe tbody tr').forEach(row => {
+      row.style.display = (!q || row.dataset.busca.includes(q)) ? '' : 'none';
     });
   });
 
