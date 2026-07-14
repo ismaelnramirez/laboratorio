@@ -1,0 +1,1721 @@
+<div id="labsys-root"></div>
+<style>
+#labsys-root, #labsys-root * { box-sizing: border-box; }
+#labsys-root {
+  --bg: #F5F6F5;
+  --card: #FFFFFF;
+  --border: #DFE3DF;
+  --text: #1F2A24;
+  --muted: #5C6B62;
+  --primary: #0F6E56;
+  --primary-dark: #085041;
+  --primary-light: #E1F5EE;
+  --danger: #A32D2D;
+  --danger-light: #FCEBEB;
+  --amber: #854F0B;
+  --amber-light: #FAEEDA;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  font-size: 14px;
+  line-height: 1.5;
+}
+#labsys-root .nav {
+  width: 210px;
+  flex-shrink: 0;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  min-height: 100vh;
+}
+#labsys-root .brand {
+  padding: 0 20px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+#labsys-root .brand .name { font-size: 16px; font-weight: 600; color: var(--primary-dark); }
+#labsys-root .brand .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+#labsys-root .navbtn {
+  display: block; width: 100%; text-align: left; padding: 10px 20px;
+  background: none; border: none; font-size: 14px; color: var(--text);
+  cursor: pointer; border-left: 3px solid transparent;
+}
+#labsys-root .navbtn:hover { background: var(--primary-light); }
+#labsys-root .navbtn.active { background: var(--primary-light); border-left-color: var(--primary); color: var(--primary-dark); font-weight: 600; }
+#labsys-root .navbtn .count { float: right; color: var(--muted); font-size: 12px; }
+#labsys-root .main { flex: 1; padding: 28px 36px; max-width: 1000px; }
+#labsys-root h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+#labsys-root .lead { color: var(--muted); font-size: 13px; margin: 0 0 22px; }
+#labsys-root .card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px; margin-bottom: 16px;
+}
+#labsys-root .card h2 { font-size: 15px; font-weight: 600; margin: 0 0 14px; }
+#labsys-root label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; margin-top: 10px; }
+#labsys-root label:first-child { margin-top: 0; }
+#labsys-root input[type=text], #labsys-root input[type=date], #labsys-root input[type=number], #labsys-root select, #labsys-root textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; font-family: inherit; background: #fff; color: var(--text);
+}
+#labsys-root .row { display: flex; gap: 14px; flex-wrap: wrap; }
+#labsys-root .row > div { flex: 1; min-width: 160px; }
+#labsys-root button.btn {
+  padding: 9px 16px; border-radius: 6px; border: 1px solid var(--primary);
+  background: var(--primary); color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; margin-top: 14px;
+}
+#labsys-root button.btn:hover { background: var(--primary-dark); }
+#labsys-root button.btn.secondary { background: #fff; color: var(--primary); }
+#labsys-root button.btn.small { padding: 5px 10px; font-size: 12px; margin-top: 0; }
+#labsys-root table { width: 100%; border-collapse: collapse; font-size: 13px; }
+#labsys-root th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); font-size: 12px; }
+#labsys-root td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+#labsys-root tr:last-child td { border-bottom: none; }
+#labsys-root .pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+#labsys-root .pill.pendiente { background: #F1EFE8; color: #5F5E5A; }
+#labsys-root .pill.tomada, #labsys-root .pill.en_proceso { background: var(--amber-light); color: var(--amber); }
+#labsys-root .pill.capturada { background: #E6F1FB; color: #0C447C; }
+#labsys-root .pill.validada { background: var(--primary-light); color: var(--primary-dark); }
+#labsys-root .pill.entregada { background: #EAF3DE; color: #27500A; }
+#labsys-root .pill.anulada { background: var(--danger-light); color: var(--danger); text-decoration: line-through; }
+#labsys-root .clickrow { cursor: pointer; }
+#labsys-root .clickrow:hover { background: var(--bg); }
+#labsys-root .empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+#labsys-root details.catgroup { margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; }
+#labsys-root details.catgroup[open] { padding-bottom: 8px; }
+#labsys-root details.catgroup summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+#labsys-root details.catgroup summary::-webkit-details-marker { display: none; }
+#labsys-root details.catgroup summary .catname { font-size: 13px; font-weight: 600; color: var(--primary-dark); flex: 1; }
+#labsys-root details.catgroup summary .catcount { font-size: 11px; color: var(--muted); }
+#labsys-root .testrow { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--bg); }
+#labsys-root .testrow label { margin: 0; color: var(--text); font-size: 13px; display: inline; }
+#labsys-root .refbox { font-size: 12px; color: var(--muted); margin-top: 2px; }
+#labsys-root .oor { color: var(--danger); font-weight: 600; }
+#labsys-root .backlink { font-size: 12px; color: var(--primary); cursor: pointer; margin-bottom: 14px; display: inline-block; }
+#labsys-root .toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary-dark); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 50; }
+#labsys-root .banner { background: var(--amber-light); color: var(--amber); border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 18px; }
+#labsys-root .informe-header { display: flex; justify-content: space-between; border-bottom: 2px solid var(--primary-dark); padding-bottom: 12px; margin-bottom: 16px; }
+#labsys-root .informe-table th { background: var(--bg); }
+#labsys-root .informe-table { table-layout: fixed; }
+#labsys-root .informe-table th:nth-child(1), #labsys-root .informe-table td:nth-child(1) { width: 42%; }
+#labsys-root .informe-table th:nth-child(2), #labsys-root .informe-table td:nth-child(2) { width: 18%; }
+#labsys-root .informe-table th:nth-child(3), #labsys-root .informe-table td:nth-child(3) { width: 15%; }
+#labsys-root .informe-table th:nth-child(4), #labsys-root .informe-table td:nth-child(4) { width: 25%; }
+#labsys-root .informe-table td, #labsys-root .informe-table th { word-break: break-word; }
+#labsys-root .informe-table td:nth-child(2) { white-space: nowrap; }
+#labsys-root .informe-cat { margin-top: 18px; font-size: 13px; font-weight: 700; color: var(--primary-dark); text-transform: uppercase; letter-spacing: .03em; }
+#labsys-root .capgroup { margin-bottom: 18px; }
+#labsys-root .capgroup h3 { font-size: 13px; font-weight: 600; color: var(--primary-dark); margin: 0 0 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+#labsys-root .capgroup:first-child h3 { border-top: none; padding-top: 0; }
+#labsys-root .firma-block { width: 260px; margin: 70px 0 0 auto; text-align: center; }
+#labsys-root .firma-linea { border-top: 1px solid var(--text); margin-bottom: 6px; }
+#labsys-root .login-wrap { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; }
+#labsys-root .login-card { width: 320px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+#labsys-root .sesion-info { margin-top: auto; padding: 14px 20px 0; border-top: 1px solid var(--border); position: sticky; bottom: 0; background: var(--card); }
+#labsys-root .nav { display: flex; flex-direction: column; }
+@media print {
+  #labsys-root .nav, #labsys-root .no-print { display: none !important; }
+  #labsys-root .main { max-width: 100%; padding: 0; }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+
+// ============================================================
+// Pega aquí la URL y la llave "anon public" de tu proyecto Supabase
+// (Supabase → Project Settings → API)
+// ============================================================
+const SUPABASE_URL = 'https://poeowqukrbyctcgqlpfv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_n5FvEZv3atdDtd4DfG1aKw_ZrvQzV30';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+// El catálogo (categorías, pruebas y valores de referencia) vive en Supabase — se carga con fetchTodo().
+
+let CATEGORIAS = [];
+let PRUEBAS = [];
+let pacientes = [];
+let ordenes = [];
+let medicos = [];
+let laboratorio = {};
+let bitacora = [];
+let usuarios = [];
+let view = 'pacientes';
+let ctxOrdenId = null;
+let ctxPruebaId = null;
+let ctxPacienteEdit = null;
+let ctxMedicoEdit = null;
+let sesion = null;
+let loginError = '';
+let mostrarSignup = false;
+
+const PERMISOS = {
+  pacientes: ['secretaria','administrador'],
+  'ficha-paciente': ['secretaria','quimico','contador','administrador'],
+  medicos: ['secretaria','administrador'],
+  'nueva-orden': ['secretaria','administrador'],
+  ordenes: ['secretaria','quimico','contador','administrador'],
+  buscar: ['secretaria','quimico','contador','administrador'],
+  captura: ['quimico','administrador'],
+  'captura-pdf': ['quimico','administrador'],
+  validacion: ['quimico','administrador'],
+  informe: ['secretaria','quimico','contador','administrador'],
+  reportes: ['secretaria','quimico','contador','administrador'],
+  catalogo: ['administrador'],
+  laboratorio: ['administrador'],
+  usuarios: ['administrador'],
+  bitacora: ['administrador'],
+  'mi-cuenta': ['secretaria','quimico','contador','administrador']
+};
+function puedeVer(v) { return sesion && (sesion.rol === 'administrador' || !PERMISOS[v] || PERMISOS[v].includes(sesion.rol)); }
+function vistaInicial() {
+  if (!sesion) return 'pacientes';
+  if (sesion.rol === 'administrador' || sesion.rol === 'secretaria') return 'pacientes';
+  if (sesion.rol === 'quimico') return 'captura';
+  if (sesion.rol === 'contador') return 'ordenes';
+  return 'pacientes';
+}
+
+async function init() {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) {
+    await onAuthed(data.session.user);
+  } else {
+    render();
+  }
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') { sesion = null; pacientes = []; ordenes = []; medicos = []; bitacora = []; render(); }
+  });
+}
+
+async function onAuthed(user) {
+  const { data: perfil, error } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
+  if (error || !perfil) { loginError = 'No se encontró tu perfil. Contacta al administrador.'; await supabase.auth.signOut(); render(); return; }
+  if (perfil.activo === false) { loginError = 'Tu cuenta está desactivada. Contacta al administrador.'; await supabase.auth.signOut(); render(); return; }
+  sesion = { id: perfil.id, nombre: perfil.nombre, correo: perfil.correo, rol: perfil.rol };
+  loginError = '';
+  await fetchTodo();
+  view = vistaInicial();
+  render();
+}
+
+async function fetchTodo() {
+  const [cat, pru, lab, pac, med, ord] = await Promise.all([
+    supabase.from('categorias').select('*').order('orden'),
+    supabase.from('pruebas').select('*, valores_referencia(*)').order('id'),
+    supabase.from('laboratorio_config').select('*').eq('id', 1).single(),
+    supabase.from('pacientes').select('*').order('id'),
+    supabase.from('medicos').select('*').order('id'),
+    supabase.from('ordenes').select('*, orden_detalle(*)').order('id')
+  ]);
+  CATEGORIAS = cat.data || [];
+  PRUEBAS = (pru.data || []).map(p => ({
+    id: p.id, categoria_id: p.categoria_id, nombre: p.nombre, unidad: p.unidad, tipo: p.tipo, activo: p.activo,
+    ref: (p.valores_referencia || []).map(r => ({
+      sexo: r.sexo, min: r.valor_min ?? undefined, max: r.valor_max ?? undefined,
+      texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined
+    }))
+  }));
+  laboratorio = lab.data || {};
+  pacientes = (pac.data || []).map(p => ({
+    id: p.id, nombres: p.nombres, apellidos: p.apellidos, fnac: p.fecha_nacimiento,
+    sexo: p.sexo, direccion: p.direccion, telefono: p.telefono
+  }));
+  medicos = med.data || [];
+  ordenes = (ord.data || []).map(o => ({
+    id: o.id, paciente_id: o.paciente_id, fecha: o.fecha, medico: o.medico_nombre,
+    estado: o.estado, fecha_validacion: o.fecha_validacion,
+    medio_entrega: o.medio_entrega, medio_texto: o.medio_texto, receptor: o.receptor,
+    entregado_por: o.entregado_por, fecha_entrega: o.fecha_entrega,
+    motivo_anulacion: o.motivo_anulacion, anulada_por: o.anulada_por, fecha_anulacion: o.fecha_anulacion,
+    detalle: (o.orden_detalle || []).map(d => ({ ...d }))
+  }));
+  bitacora = [];
+  usuarios = [];
+  if (sesion.rol === 'administrador') {
+    const { data: bit } = await supabase.from('bitacora').select('*').order('fecha', { ascending: false }).limit(200);
+    bitacora = (bit || []).slice().reverse();
+    const { data: perf } = await supabase.from('perfiles').select('*').order('creado_en');
+    usuarios = perf || [];
+  }
+}
+
+async function fetchUsuarios() {
+  const { data } = await supabase.from('perfiles').select('*').order('creado_en');
+  return data || [];
+}
+
+function logAccion(accion, detalle) {
+  if (!sesion) return;
+  supabase.from('bitacora').insert({
+    usuario: sesion.nombre, rol: sesion.rol, accion, detalle: detalle || ''
+  }).then(() => {});
+}
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.getElementById('labsys-root').appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+function edad(fnac) {
+  if (!fnac) return null;
+  const d = new Date(fnac), n = new Date();
+  let a = n.getFullYear() - d.getFullYear();
+  if (n.getMonth() < d.getMonth() || (n.getMonth()===d.getMonth() && n.getDate()<d.getDate())) a--;
+  return a;
+}
+
+function edadDetalle(fnac) {
+  const d = new Date(fnac), n = new Date();
+  let years = n.getFullYear() - d.getFullYear();
+  let months = n.getMonth() - d.getMonth();
+  let days = n.getDate() - d.getDate();
+  if (days < 0) { months--; days += new Date(n.getFullYear(), n.getMonth(), 0).getDate(); }
+  if (months < 0) { years--; months += 12; }
+  return { years, months, days };
+}
+
+function edadTexto(fnac) {
+  const a = edad(fnac);
+  if (a === null) return '—';
+  if (a <= 12) {
+    const e = edadDetalle(fnac);
+    return e.years + ' años, ' + e.months + ' meses, ' + e.days + ' días';
+  }
+  return a + ' años';
+}
+
+function refFor(prueba, paciente) {
+  const sexo = paciente ? paciente.sexo : 'A';
+  const pacEdad = paciente ? edad(paciente.fnac) : null;
+  const bySexo = prueba.ref.filter(r => r.sexo === sexo);
+  let match = bySexo.find(r => r.amin !== undefined && pacEdad !== null && pacEdad >= r.amin && pacEdad <= r.amax);
+  if (!match) match = bySexo.find(r => r.amin === undefined);
+  if (!match) match = prueba.ref.find(r => r.sexo === 'A' && r.amin === undefined);
+  return match || null;
+}
+function refTexto(r) {
+  if (!r) return '—';
+  if (r.texto) return r.texto;
+  if (r.min !== undefined && r.max !== undefined) return r.min + ' - ' + r.max;
+  if (r.max !== undefined) return '< ' + r.max;
+  if (r.min !== undefined) return '> ' + r.min;
+  return '—';
+}
+
+function pruebaById(id) { return PRUEBAS.find(p => p.id === id); }
+function pacienteById(id) { return pacientes.find(p => p.id === id); }
+function ordenById(id) { return ordenes.find(o => o.id === id); }
+function medicoById(id) { return medicos.find(m => m.id === id); }
+
+function nuevoId(arr) { return arr.length ? Math.max(...arr.map(x=>x.id)) + 1 : 1; }
+
+function setView(v, ctx) { view = v; ctxOrdenId = ctx || null; ctxPruebaId = null; ctxPacienteEdit = null; ctxMedicoEdit = null; render(); window.scrollTo(0,0); }
+window.labsysEditPaciente = function(id) { ctxPacienteEdit = id; view = 'pacientes'; ctxOrdenId = null; render(); window.scrollTo(0,0); };
+window.labsysSetView = setView;
+window.labsysToggleCat = function(catId) {
+  const master = document.getElementById('catchk-'+catId);
+  document.querySelectorAll('.chk-prueba-'+catId).forEach(c => c.checked = master.checked);
+};
+window.labsysCatalogo = function(pruebaId) {
+  view = 'catalogo'; ctxPruebaId = pruebaId || null; render(); window.scrollTo(0,0);
+};
+
+// ---------- Renderers ----------
+
+function render() {
+  const root = document.getElementById('labsys-root');
+
+  if (!sesion) {
+    root.innerHTML = renderLogin();
+    attachHandlers();
+    return;
+  }
+  if (!puedeVer(view)) view = vistaInicial();
+
+  const enProceso = ordenes.filter(o => o.estado === 'en_proceso').length;
+  const nav = [
+    ['buscar','Buscar', null],
+    ['pacientes','Pacientes', pacientes.length || null],
+    ['medicos','Médicos', medicos.length || null],
+    ['nueva-orden','Nueva orden', null],
+    ['ordenes','Órdenes', ordenes.length || null],
+    ['captura','Captura', null],
+    ['validacion','Validación', enProceso || null],
+    ['informe','Informe / entrega', null],
+    ['reportes','Reportes', null],
+    ['catalogo','Catálogo de pruebas', null],
+    ['laboratorio','Laboratorio', null],
+    ['usuarios','Usuarios', null],
+    ['bitacora','Bitácora', null],
+    ['mi-cuenta','Mi cuenta', null]
+  ].filter(([id]) => puedeVer(id));
+  root.innerHTML = `
+    <div class="nav">
+      <div class="brand"><div class="name">LabSys</div><div class="sub">Captura y entrega de resultados</div></div>
+      ${nav.map(([id,label,count]) => `
+        <button class="navbtn ${view===id?'active':''}" onclick="labsysSetView('${id}')">
+          ${label}${count ? '<span class="count">'+count+'</span>' : ''}
+        </button>`).join('')}
+      <div class="sesion-info no-print">
+        <div class="refbox">${sesion.nombre}</div>
+        <div class="refbox" style="text-transform:capitalize;">${sesion.rol}</div>
+        <span class="backlink" onclick="labsysLogout()">Cerrar sesión</span>
+      </div>
+    </div>
+    <div class="main">${renderView()}</div>
+  `;
+  attachHandlers();
+}
+
+function renderLogin() {
+  return mostrarSignup ? `
+    <div class="login-wrap"><div class="login-card">
+      <div class="brand" style="border:none;padding:0 0 16px;"><div class="name">LabSys</div><div class="sub">Crear cuenta</div></div>
+      <form id="form-signup">
+        <label>Nombre completo</label>
+        <input type="text" name="nombre" required>
+        <label>Correo</label>
+        <input type="email" name="correo" required autocomplete="username">
+        <label>Contraseña</label>
+        <input type="password" name="password" required minlength="6" autocomplete="new-password">
+        ${loginError ? '<p class="refbox oor">'+loginError+'</p>' : ''}
+        <button class="btn" type="submit" style="width:100%;">Crear cuenta</button>
+      </form>
+      <p class="refbox" style="margin-top:14px;text-align:center;">
+        ¿Ya tienes cuenta? <span class="backlink" onclick="labsysToggleSignup(false)">Inicia sesión</span>
+      </p>
+      <p class="refbox" style="margin-top:6px;text-align:center;">Las cuentas nuevas nacen con rol "secretaria" — un administrador te asigna el rol correcto luego.</p>
+    </div></div>
+  ` : `
+    <div class="login-wrap"><div class="login-card">
+      <div class="brand" style="border:none;padding:0 0 16px;"><div class="name">LabSys</div><div class="sub">Inicia sesión</div></div>
+      <form id="form-login">
+        <label>Correo</label>
+        <input type="email" name="correo" required autocomplete="username">
+        <label>Contraseña</label>
+        <input type="password" name="password" required autocomplete="current-password">
+        ${loginError ? '<p class="refbox oor">'+loginError+'</p>' : ''}
+        <button class="btn" type="submit" style="width:100%;">Entrar</button>
+      </form>
+      <p class="refbox" style="margin-top:14px;text-align:center;">
+        ¿Primera vez aquí? <span class="backlink" onclick="labsysToggleSignup(true)">Crea una cuenta</span>
+      </p>
+    </div></div>
+  `;
+}
+
+window.labsysToggleSignup = function(v) { mostrarSignup = v; loginError = ''; render(); };
+window.labsysLogout = async function() { await supabase.auth.signOut(); sesion = null; render(); };
+
+function renderView() {
+  if (!puedeVer(view)) return '<div class="card"><div class="empty">No tienes permiso para ver esta sección.</div></div>';
+  if (view === 'pacientes') return viewPacientes();
+  if (view === 'ficha-paciente') return viewFichaPaciente();
+  if (view === 'medicos') return viewMedicos();
+  if (view === 'nueva-orden') return viewNuevaOrden();
+  if (view === 'ordenes') return viewOrdenes();
+  if (view === 'buscar') return viewBuscar();
+  if (view === 'captura') return viewCaptura();
+  if (view === 'captura-pdf') return viewCapturaPDF();
+  if (view === 'validacion') return viewValidacion();
+  if (view === 'informe') return viewInforme();
+  if (view === 'reportes') return viewReportes();
+  if (view === 'catalogo') return viewCatalogo();
+  if (view === 'laboratorio') return viewLaboratorio();
+  if (view === 'usuarios') return viewUsuarios();
+  if (view === 'bitacora') return viewBitacora();
+  if (view === 'mi-cuenta') return viewMiCuenta();
+  return '';
+}
+
+function viewPacientes() {
+  const editando = ctxPacienteEdit ? pacienteById(ctxPacienteEdit) : null;
+  return `
+    <h1>Pacientes</h1>
+    <p class="lead">Datos visibles para todo el equipo que usa este panel.</p>
+    <div class="card">
+      <h2>${editando ? 'Editar paciente' : 'Registrar paciente'}</h2>
+      <form id="form-paciente">
+        <input type="hidden" name="id" value="${editando ? editando.id : ''}">
+        <div class="row">
+          <div><label>Nombres</label><input type="text" name="nombres" required value="${editando ? editando.nombres : ''}"></div>
+          <div><label>Apellidos</label><input type="text" name="apellidos" required value="${editando ? editando.apellidos : ''}"></div>
+        </div>
+        <div class="row">
+          <div><label>Fecha de nacimiento</label><input type="date" name="fnac" required value="${editando ? editando.fnac : ''}"></div>
+          <div><label>Sexo</label><select name="sexo">
+            <option value="M" ${editando && editando.sexo==='M'?'selected':''}>Masculino</option>
+            <option value="F" ${editando && editando.sexo==='F'?'selected':''}>Femenino</option>
+          </select></div>
+        </div>
+        <div class="row">
+          <div><label>Teléfono</label><input type="text" name="telefono" value="${editando ? (editando.telefono||'') : ''}"></div>
+        </div>
+        <label>Dirección</label>
+        <input type="text" name="direccion" placeholder="Dirección de residencia" value="${editando ? (editando.direccion||'') : ''}">
+        <button class="btn" type="submit">${editando ? 'Guardar cambios' : 'Guardar paciente'}</button>
+        ${editando ? `<button class="btn secondary" type="button" onclick="ctxPacienteEdit=null;render();">Cancelar</button>` : ''}
+      </form>
+    </div>
+    <div class="card">
+      <h2>Listado (${pacientes.length})</h2>
+      ${pacientes.length === 0 ? '<div class="empty">Todavía no hay pacientes registrados.</div>' : `
+      <table><thead><tr><th>Nombre</th><th>Edad</th><th>Sexo</th><th>Dirección</th><th>Teléfono</th><th></th></tr></thead><tbody>
+        ${pacientes.slice().reverse().map(p => `
+          <tr>
+            <td class="clickrow" onclick="labsysSetView('ficha-paciente','${p.id}')">${p.nombres} ${p.apellidos}</td>
+            <td>${edad(p.fnac)}</td>
+            <td>${p.sexo === 'M' ? 'M' : 'F'}</td>
+            <td>${p.direccion || '—'}</td>
+            <td>${p.telefono || '—'}</td>
+            <td style="white-space:nowrap;">
+              <button class="btn small secondary" onclick="labsysSetView('nueva-orden','${p.id}')">Nueva orden</button>
+              <button class="btn small secondary" onclick="ctxPacienteEdit=${p.id};render();window.scrollTo(0,0);">Editar</button>
+            </td>
+          </tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function viewFichaPaciente() {
+  const pac = ctxOrdenId ? pacienteById(Number(ctxOrdenId)) : null;
+  if (!pac) return '<div class="card"><div class="empty">Selecciona un paciente desde el listado.</div></div>';
+  const susOrdenes = ordenes.filter(o => o.paciente_id === pac.id).slice().reverse();
+  return `
+    <span class="backlink" onclick="labsysSetView('pacientes')">&larr; Volver a pacientes</span>
+    <h1>${pac.nombres} ${pac.apellidos}</h1>
+    <p class="lead">Ficha del paciente e historial completo de órdenes.</p>
+    <div class="card">
+      <div class="row">
+        <div><label>Edad</label><div>${edadTexto(pac.fnac)}</div></div>
+        <div><label>Sexo</label><div>${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}</div></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div><label>Dirección</label><div>${pac.direccion || '—'}</div></div>
+        <div><label>Teléfono</label><div>${pac.telefono || '—'}</div></div>
+      </div>
+      <button class="btn" style="margin-top:16px;" onclick="labsysSetView('nueva-orden','${pac.id}')">+ Nueva orden</button>
+      <button class="btn secondary" onclick="labsysEditPaciente(${pac.id})">Editar datos</button>
+    </div>
+    <div class="card">
+      <h2>Historial de órdenes (${susOrdenes.length})</h2>
+      ${susOrdenes.length === 0 ? '<div class="empty">Este paciente todavía no tiene órdenes.</div>' : `
+      <table><thead><tr><th>Folio</th><th>Fecha</th><th>Pruebas</th><th>Médico</th><th>Estado</th><th></th></tr></thead><tbody>
+        ${susOrdenes.map(o => `
+          <tr>
+            <td>#${String(o.id).padStart(4,'0')}</td>
+            <td>${new Date(o.fecha).toLocaleDateString()}</td>
+            <td>${o.detalle.length}</td>
+            <td>${o.medico || '—'}</td>
+            <td><span class="pill ${o.estado}">${o.estado.replace('_',' ')}</span></td>
+            <td>${(o.estado === 'validada' || o.estado === 'entregada') ? `<button class="btn small secondary" onclick="labsysSetView('informe','${o.id}')">Ver informe</button>` : `<button class="btn small secondary" onclick="labsysSetView('captura','${o.id}')">Ver</button>`}</td>
+          </tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function viewMedicos() {
+  const editando = ctxMedicoEdit ? medicoById(ctxMedicoEdit) : null;
+  return `
+    <h1>Médicos</h1>
+    <p class="lead">Regístralos una vez y búscalos al crear una orden.</p>
+    <div class="card">
+      <h2>${editando ? 'Editar médico' : 'Registrar médico'}</h2>
+      <form id="form-medico">
+        <input type="hidden" name="id" value="${editando ? editando.id : ''}">
+        <div class="row">
+          <div><label>Nombre</label><input type="text" name="nombre" required placeholder="Dra. Rebeca Ramírez" value="${editando ? editando.nombre : ''}"></div>
+          <div><label>No. de colegiado</label><input type="text" name="colegiado" value="${editando ? (editando.colegiado||'') : ''}"></div>
+          <div><label>Teléfono</label><input type="text" name="telefono" value="${editando ? (editando.telefono||'') : ''}"></div>
+        </div>
+        <button class="btn" type="submit">${editando ? 'Guardar cambios' : 'Guardar médico'}</button>
+        ${editando ? `<button class="btn secondary" type="button" onclick="ctxMedicoEdit=null;render();">Cancelar</button>` : ''}
+      </form>
+    </div>
+    <div class="card">
+      <h2>Listado (${medicos.length})</h2>
+      ${medicos.length === 0 ? '<div class="empty">Todavía no hay médicos registrados.</div>' : `
+      <table><thead><tr><th>Nombre</th><th>Colegiado</th><th>Teléfono</th><th></th></tr></thead><tbody>
+        ${medicos.slice().reverse().map(m => `
+          <tr><td>${m.nombre}</td><td>${m.colegiado || '—'}</td><td>${m.telefono || '—'}</td>
+            <td><button class="btn small secondary" onclick="ctxMedicoEdit=${m.id};render();window.scrollTo(0,0);">Editar</button></td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function viewLaboratorio() {
+  const l = laboratorio;
+  return `
+    <h1>Datos del laboratorio</h1>
+    <p class="lead">Esta información aparece en el encabezado de todos los informes impresos.</p>
+    <div class="card">
+      <form id="form-laboratorio">
+        <label>Nombre del laboratorio</label>
+        <input type="text" name="nombre" value="${l.nombre || ''}" placeholder="Laboratorio Clínico...">
+        <div class="row">
+          <div><label>Dirección</label><input type="text" name="direccion" value="${l.direccion || ''}"></div>
+          <div><label>NIT</label><input type="text" name="nit" value="${l.nit || ''}"></div>
+        </div>
+        <div class="row">
+          <div><label>Teléfono</label><input type="text" name="telefono" value="${l.telefono || ''}"></div>
+          <div><label>Correo</label><input type="text" name="correo" value="${l.correo || ''}"></div>
+          <div><label>Sitio web</label><input type="text" name="sitio_web" value="${l.sitio_web || ''}"></div>
+        </div>
+        <label>Horario de atención</label>
+        <input type="text" name="horario" value="${l.horario || ''}" placeholder="Lunes a viernes 7:00-17:00 · Sábados 7:00-12:00">
+        <label>Química bióloga (para la firma del informe)</label>
+        <input type="text" name="responsable" value="${l.responsable || ''}" placeholder="Nombre — Colegiado 0000">
+        <label>Logo del laboratorio</label>
+        ${l.logo ? `<div style="margin-bottom:8px;"><img src="${l.logo}" alt="Logo actual" style="max-height:140px;max-width:140px;display:block;border:1px solid var(--border);border-radius:6px;padding:6px;"></div>` : ''}
+        <input type="file" id="logo-input" accept="image/*">
+        ${l.logo ? '<label style="display:flex;align-items:center;gap:8px;margin-top:8px;"><input type="checkbox" id="logo-quitar" style="width:auto;margin:0;"> Quitar el logo actual</label>' : ''}
+        <p class="refbox">JPG o PNG, idealmente menor a 300 KB para que no haga lento el sistema.</p>
+        <button class="btn" type="submit">Guardar datos</button>
+      </form>
+    </div>
+  `;
+}
+
+function viewUsuarios() {
+  return `
+    <h1>Usuarios</h1>
+    <p class="lead">Cada persona crea su propia cuenta desde la pantalla de inicio de sesión ("Crea una cuenta"). Aquí le asignas el rol correcto y puedes desactivarla si hace falta.</p>
+    <div class="card">
+      <h2>Listado (${usuarios.length})</h2>
+      ${usuarios.length === 0 ? '<div class="empty">Todavía no hay cuentas registradas.</div>' : `
+      <table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead><tbody>
+        ${usuarios.map(u => `
+          <tr>
+            <td>${u.nombre}</td>
+            <td>${u.correo}</td>
+            <td>
+              <select data-rol-usuario="${u.id}" ${u.id===sesion.id?'disabled':''} style="width:auto;">
+                <option value="secretaria" ${u.rol==='secretaria'?'selected':''}>Secretaria</option>
+                <option value="quimico" ${u.rol==='quimico'?'selected':''}>Química Bióloga</option>
+                <option value="contador" ${u.rol==='contador'?'selected':''}>Contador</option>
+                <option value="administrador" ${u.rol==='administrador'?'selected':''}>Administrador</option>
+              </select>
+            </td>
+            <td><span class="pill ${u.activo===false?'pendiente':'validada'}">${u.activo===false?'inactivo':'activo'}</span></td>
+            <td><button class="btn small secondary" data-toggle-usuario="${u.id}" ${u.id===sesion.id?'disabled':''}>${u.activo===false?'Activar':'Desactivar'}</button></td>
+          </tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function viewMiCuenta() {
+  return `
+    <h1>Mi cuenta</h1>
+    <p class="lead">${sesion.nombre} · ${sesion.correo} · rol: ${sesion.rol}</p>
+    <div class="card">
+      <h2>Cambiar mi contraseña</h2>
+      <form id="form-mi-password">
+        <label>Contraseña nueva</label>
+        <input type="password" name="password" required minlength="6" autocomplete="new-password">
+        <label>Confirmar contraseña nueva</label>
+        <input type="password" name="password2" required minlength="6" autocomplete="new-password">
+        <button class="btn" type="submit">Actualizar contraseña</button>
+      </form>
+    </div>
+  `;
+}
+
+function viewBitacora() {
+  const entradas = bitacora.slice().reverse().slice(0, 200);
+  return `
+    <h1>Bitácora de cambios</h1>
+    <p class="lead">Registro de acciones importantes realizadas en el sistema (últimas ${entradas.length}).</p>
+    <div class="card">
+      ${entradas.length === 0 ? '<div class="empty">Todavía no hay actividad registrada.</div>' : `
+      <table><thead><tr><th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>
+        ${entradas.map(e => `
+          <tr>
+            <td class="refbox">${new Date(e.fecha).toLocaleString()}</td>
+            <td>${e.usuario}</td>
+            <td style="text-transform:capitalize;" class="refbox">${e.rol}</td>
+            <td>${e.accion}</td>
+            <td class="refbox">${e.detalle || ''}</td>
+          </tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function viewCatalogo() {
+  if (ctxPruebaId) return viewCatalogoForm();
+  const grupos = CATEGORIAS.map(c => ({ cat: c, items: PRUEBAS.filter(p => p.categoria_id === c.id) })).filter(g => g.items.length);
+  return `
+    <h1>Catálogo de pruebas</h1>
+    <p class="lead">Edita una prueba existente o agrega una que no aparezca en el listado.</p>
+    <button class="btn" onclick="labsysCatalogo('nueva')">+ Agregar prueba nueva</button>
+    ${grupos.map(g => `
+      <div class="card">
+        <h2>${g.cat.nombre}</h2>
+        <table><thead><tr><th>Prueba</th><th>Unidad</th><th>Tipo</th><th>Referencia</th><th>Estado</th><th></th></tr></thead><tbody>
+          ${g.items.map(p => {
+            const ref = p.ref && p.ref[0] ? refTexto(p.ref[0]) : '—';
+            const inactivo = p.activo === false;
+            return `<tr>
+              <td>${p.nombre}</td>
+              <td>${p.unidad || '—'}</td>
+              <td>${p.tipo}</td>
+              <td class="refbox">${ref}${p.ref && p.ref.length > 1 ? ' (+'+(p.ref.length-1)+')' : ''}</td>
+              <td><span class="pill ${inactivo ? 'pendiente' : 'validada'}">${inactivo ? 'inactiva' : 'activa'}</span></td>
+              <td style="white-space:nowrap;">
+                <button class="btn small secondary" onclick="labsysCatalogo(${p.id})">Editar</button>
+                <button class="btn small secondary" data-toggle-activo="${p.id}">${inactivo ? 'Activar' : 'Desactivar'}</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody></table>
+      </div>`).join('')}
+  `;
+}
+
+function viewCatalogoForm() {
+  const esNueva = ctxPruebaId === 'nueva';
+  const p = esNueva ? null : pruebaById(Number(ctxPruebaId));
+  const refM = p ? p.ref.find(r => r.sexo === 'M') : null;
+  const refF = p ? p.ref.find(r => r.sexo === 'F') : null;
+  const refA = p ? p.ref.find(r => r.sexo === 'A') : null;
+  const distintoSexo = !!(refM || refF);
+  const base = distintoSexo ? null : refA;
+  return `
+    <span class="backlink" onclick="labsysCatalogo()">&larr; Volver al catálogo</span>
+    <h1>${esNueva ? 'Agregar prueba nueva' : 'Editar prueba'}</h1>
+    ${!esNueva && p && p.ref.length > 2 ? '<div class="banner">Esta prueba tiene un rango de referencia con varias condiciones (por edad u otras). Si la guardas desde aquí, se reemplaza por un rango simple.</div>' : ''}
+    <div class="card">
+      <form id="form-prueba">
+        <input type="hidden" name="id" value="${esNueva ? '' : p.id}">
+        <div class="row">
+          <div style="flex:2">
+            <label>Categoría</label>
+            <select name="categoria_id" id="prueba-categoria">
+              ${CATEGORIAS.map(c => `<option value="${c.id}" ${p && p.categoria_id===c.id ? 'selected':''}>${c.nombre}</option>`).join('')}
+              <option value="nueva">+ Nueva categoría...</option>
+            </select>
+          </div>
+        </div>
+        <input type="text" id="prueba-categoria-nueva" placeholder="Nombre de la categoría nueva" style="display:none;margin-top:8px;">
+        <div class="row">
+          <div style="flex:2"><label>Nombre de la prueba</label><input type="text" name="nombre" required value="${p ? p.nombre : ''}"></div>
+          <div><label>Unidad de medida</label><input type="text" name="unidad" value="${p ? p.unidad : ''}" placeholder="mg/dL"></div>
+        </div>
+        <label>Tipo de resultado</label>
+        <select name="tipo" id="prueba-tipo">
+          <option value="numerico" ${p && p.tipo==='numerico'?'selected':''}>Numérico</option>
+          <option value="cualitativo" ${p && p.tipo==='cualitativo'?'selected':''}>Cualitativo (ej. Negativo/Positivo)</option>
+          <option value="texto" ${p && p.tipo==='texto'?'selected':''}>Texto libre (sin rango)</option>
+        </select>
+
+        <div id="prueba-ref-block" style="margin-top:10px;">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="prueba-distinto-sexo" ${distintoSexo?'checked':''} style="width:auto;margin:0;">
+            El rango de referencia es distinto para hombres y mujeres
+          </label>
+
+          <div id="ref-unico" style="${distintoSexo?'display:none;':''}">
+            <div class="row">
+              <div><label>Valor mínimo</label><input type="number" step="any" id="ref-a-min" value="${base && base.min!==undefined ? base.min : ''}"></div>
+              <div><label>Valor máximo</label><input type="number" step="any" id="ref-a-max" value="${base && base.max!==undefined ? base.max : ''}"></div>
+            </div>
+            <label>Texto de referencia (opcional — reemplaza los valores de arriba, ej. "Negativo")</label>
+            <input type="text" id="ref-a-texto" value="${base && base.texto ? base.texto : ''}">
+          </div>
+
+          <div id="ref-doble" style="${distintoSexo?'':'display:none;'}">
+            <p class="refbox" style="margin-top:10px;">Hombres</p>
+            <div class="row">
+              <div><label>Mínimo</label><input type="number" step="any" id="ref-m-min" value="${refM && refM.min!==undefined ? refM.min : ''}"></div>
+              <div><label>Máximo</label><input type="number" step="any" id="ref-m-max" value="${refM && refM.max!==undefined ? refM.max : ''}"></div>
+            </div>
+            <input type="text" id="ref-m-texto" placeholder="Texto de referencia (opcional)" value="${refM && refM.texto ? refM.texto : ''}">
+            <p class="refbox" style="margin-top:10px;">Mujeres</p>
+            <div class="row">
+              <div><label>Mínimo</label><input type="number" step="any" id="ref-f-min" value="${refF && refF.min!==undefined ? refF.min : ''}"></div>
+              <div><label>Máximo</label><input type="number" step="any" id="ref-f-max" value="${refF && refF.max!==undefined ? refF.max : ''}"></div>
+            </div>
+            <input type="text" id="ref-f-texto" placeholder="Texto de referencia (opcional)" value="${refF && refF.texto ? refF.texto : ''}">
+          </div>
+        </div>
+
+        <button class="btn" type="submit">${esNueva ? 'Agregar prueba' : 'Guardar cambios'}</button>
+      </form>
+    </div>
+  `;
+}
+
+function viewNuevaOrden() {
+  const preselect = ctxOrdenId; // reused param as paciente id here
+  return `
+    <h1>Nueva orden</h1>
+    <p class="lead">Marca una categoría completa para cargar todas sus pruebas, o abre el detalle para elegir solo algunas.</p>
+    ${pacientes.length === 0 ? '<div class="card"><div class="empty">Registra un paciente primero.</div></div>' : `
+    <div class="card">
+      <h2>Paciente</h2>
+      <select id="sel-paciente">
+        <option value="">Selecciona un paciente...</option>
+        ${pacientes.map(p => `<option value="${p.id}" ${String(p.id)===String(preselect)?'selected':''}>${p.nombres} ${p.apellidos} — ${edad(p.fnac)} años</option>`).join('')}
+      </select>
+      <label>Médico que refiere (opcional)</label>
+      <input type="text" id="orden-medico" list="dl-medicos" placeholder="Escribe para buscar...">
+      <datalist id="dl-medicos">
+        ${medicos.map(m => `<option value="${m.nombre}">`).join('')}
+      </datalist>
+      ${medicos.length === 0
+        ? `<div class="refbox">Todavía no tienes médicos registrados. <span class="backlink" style="margin:6px 0 0;" onclick="labsysSetView('medicos')">Registra uno</span></div>`
+        : `<div class="refbox">¿No aparece? <span class="backlink" style="margin:6px 0 0;" onclick="labsysSetView('medicos')">Registra un médico nuevo</span></div>`}
+    </div>
+    <div class="card">
+      <h2>Pruebas solicitadas</h2>
+      <input type="text" id="buscador-pruebas" placeholder="Buscar prueba por nombre..." style="margin-bottom:14px;">
+      ${CATEGORIAS.filter(c => PRUEBAS.some(p => p.categoria_id === c.id && p.activo !== false)).map(c => {
+        const items = PRUEBAS.filter(p => p.categoria_id === c.id && p.activo !== false);
+        return `
+        <details class="catgroup">
+          <summary>
+            <input type="checkbox" id="catchk-${c.id}" onclick="labsysToggleCat(${c.id})">
+            <span class="catname" onclick="event.preventDefault(); this.closest('details').open = !this.closest('details').open;">${c.nombre}</span>
+            <span class="catcount">${items.length} pruebas</span>
+          </summary>
+          ${items.map(p => `
+            <div class="testrow">
+              <input type="checkbox" class="chk-prueba chk-prueba-${c.id}" value="${p.id}" id="chk-${p.id}">
+              <label for="chk-${p.id}">${p.nombre} ${p.unidad ? '<span class="refbox">('+p.unidad+')</span>' : ''}</label>
+            </div>`).join('')}
+        </details>`;
+      }).join('')}
+      <button class="btn" id="btn-crear-orden">Crear orden</button>
+    </div>
+    `}
+  `;
+}
+
+function viewBuscar() {
+  return `
+    <h1>Buscar</h1>
+    <p class="lead">Busca por nombre de paciente, teléfono o folio de orden.</p>
+    <div class="card">
+      <input type="text" id="global-search-input" placeholder="Escribe para buscar...">
+      <div id="global-search-results" style="margin-top:16px;">${renderBusquedaResultados('')}</div>
+    </div>
+  `;
+}
+
+function renderBusquedaResultados(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return '<div class="empty">Escribe para empezar a buscar.</div>';
+  const pacMatches = pacientes.filter(p =>
+    (p.nombres+' '+p.apellidos).toLowerCase().includes(q) ||
+    (p.telefono||'').toLowerCase().includes(q)
+  ).slice(0, 15);
+  const ordMatches = ordenes.filter(o => {
+    const pac = pacienteById(o.paciente_id);
+    const folio = '#' + String(o.id).padStart(4,'0');
+    return folio.toLowerCase().includes(q) || String(o.id) === q ||
+      (pac && (pac.nombres+' '+pac.apellidos).toLowerCase().includes(q));
+  }).slice(0, 15);
+
+  let html = '<h3 style="font-size:13px;margin:0 0 8px;">Pacientes (' + pacMatches.length + ')</h3>';
+  html += pacMatches.length === 0 ? '<div class="empty">Sin coincidencias.</div>' : `
+    <table><tbody>
+    ${pacMatches.map(p => `<tr class="clickrow" onclick="labsysSetView('ficha-paciente','${p.id}')">
+      <td>${p.nombres} ${p.apellidos}</td><td class="refbox">${edad(p.fnac)} años</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  html += '<h3 style="font-size:13px;margin:20px 0 8px;">Órdenes (' + ordMatches.length + ')</h3>';
+  html += ordMatches.length === 0 ? '<div class="empty">Sin coincidencias.</div>' : `
+    <table><tbody>
+    ${ordMatches.map(o => {
+      const pac = pacienteById(o.paciente_id);
+      const destino = (o.estado === 'validada' || o.estado === 'entregada') ? 'informe' : 'captura';
+      return `<tr class="clickrow" onclick="labsysSetView('${destino}','${o.id}')">
+      <td>#${String(o.id).padStart(4,'0')}</td><td>${pac ? pac.nombres+' '+pac.apellidos : '—'}</td><td><span class="pill ${o.estado}">${o.estado.replace('_',' ')}</span></td>
+    </tr>`;
+    }).join('')}
+    </tbody></table>`;
+  return html;
+}
+
+function viewOrdenes() {
+  return `
+    <h1>Órdenes</h1>
+    <p class="lead">Estado de cada orden creada.</p>
+    <div class="card">
+      ${ordenes.length === 0 ? '<div class="empty">No hay órdenes todavía. Crea una desde "Nueva orden".</div>' : `
+      <table><thead><tr><th>Folio</th><th>Paciente</th><th>Fecha</th><th>Pruebas</th><th>Estado</th><th></th></tr></thead><tbody>
+        ${ordenes.slice().reverse().map(o => {
+          const pac = pacienteById(o.paciente_id);
+          const clic = o.estado !== 'anulada';
+          const puedeAnular = o.estado !== 'anulada' && o.estado !== 'entregada';
+          return `<tr ${clic ? `class="clickrow" onclick="labsysSetView('captura','${o.id}')"` : ''}>
+            <td>#${String(o.id).padStart(4,'0')}</td>
+            <td>${pac ? pac.nombres+' '+pac.apellidos : '—'}</td>
+            <td>${new Date(o.fecha).toLocaleDateString()}</td>
+            <td>${o.detalle.length}</td>
+            <td><span class="pill ${o.estado}">${o.estado.replace('_',' ')}</span>${o.estado==='anulada' && o.motivo_anulacion ? '<div class="refbox">'+o.motivo_anulacion+'</div>' : ''}</td>
+            <td>${puedeAnular ? `<button class="btn small secondary" data-anular-orden="${o.id}" onclick="event.stopPropagation()">Anular</button>` : ''}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function groupByCat(detalle) {
+  return CATEGORIAS.map(c => ({
+    cat: c, items: detalle.filter(d => pruebaById(d.prueba_id).categoria_id === c.id)
+  })).filter(g => g.items.length);
+}
+
+function viewCaptura() {
+  const ordenesAbiertas = ordenes.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso');
+  const orden = ctxOrdenId ? ordenById(Number(ctxOrdenId)) : null;
+  if (!orden) {
+    return `
+      <h1>Captura de resultados</h1>
+      <p class="lead">Elige una orden con pruebas pendientes de capturar.</p>
+      <div class="card">
+        ${ordenesAbiertas.length === 0 ? '<div class="empty">No hay órdenes pendientes de captura.</div>' : `
+        <table><thead><tr><th>Folio</th><th>Paciente</th><th>Pendientes</th></tr></thead><tbody>
+          ${ordenesAbiertas.map(o => {
+            const pac = pacienteById(o.paciente_id);
+            const pend = o.detalle.filter(d => d.estado === 'pendiente').length;
+            return `<tr class="clickrow" onclick="labsysSetView('captura','${o.id}')">
+              <td>#${String(o.id).padStart(4,'0')}</td><td>${pac.nombres} ${pac.apellidos}</td><td>${pend} de ${o.detalle.length}</td>
+            </tr>`;
+          }).join('')}
+        </tbody></table>`}
+      </div>
+    `;
+  }
+  const pac = pacienteById(orden.paciente_id);
+  const grupos = groupByCat(orden.detalle);
+  return `
+    <span class="backlink" onclick="labsysSetView('captura')">&larr; Volver a órdenes abiertas</span>
+    <h1>Captura — orden #${String(orden.id).padStart(4,'0')}</h1>
+    <p class="lead">${pac.nombres} ${pac.apellidos} · ${edad(pac.fnac)} años · ${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}</p>
+    <div class="banner no-print">Capturando como: <strong>${sesion.nombre}</strong> — las pruebas que dejes en blanco no aparecerán en el informe final.</div>
+    <div class="card">
+      ${grupos.map(g => `
+        <div class="capgroup">
+          <h3>${g.cat.nombre}</h3>
+          <table><thead><tr><th>Prueba</th><th>Resultado</th><th>Nota</th><th>Referencia</th><th></th></tr></thead><tbody>
+            ${g.items.map(d => {
+              const p = pruebaById(d.prueba_id);
+              const ref = refFor(p, pac);
+              const oorStyle = d.fuera_de_rango ? ' style="border-color:var(--danger);background:var(--danger-light);color:var(--danger);font-weight:600;"' : '';
+              const inputHtml = p.tipo === 'numerico'
+                ? `<input type="number" step="any" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_numerico ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`
+                : `<input type="text" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_texto ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`;
+              return `<tr>
+                <td>${p.nombre}</td>
+                <td>${inputHtml} ${p.unidad ? '<span class="refbox">'+p.unidad+'</span>' : ''}
+                  ${d.fuera_de_rango ? '<div class="refbox oor">⚠️ fuera de rango</div>' : ''}</td>
+                <td><input type="text" class="cap-nota" data-id="${d.prueba_id}" value="${d.observaciones ?? ''}" placeholder="Opcional" ${d.estado==='validada'?'disabled':''}></td>
+                <td class="refbox">${refTexto(ref)}</td>
+                <td><span class="pill ${d.estado}">${d.estado}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody></table>
+        </div>`).join('')}
+      <button class="btn no-print" id="btn-guardar-captura">Guardar resultados</button>
+      <button class="btn secondary no-print" onclick="labsysSetView('captura-pdf', ${orden.id})">Descargar PDF para validación</button>
+    </div>
+  `;
+}
+
+function viewCapturaPDF() {
+  const orden = ctxOrdenId ? ordenById(Number(ctxOrdenId)) : null;
+  if (!orden) return '<div class="card"><div class="empty">Selecciona una orden desde Captura primero.</div></div>';
+  const pac = pacienteById(orden.paciente_id);
+  const conResultado = orden.detalle.filter(d => d.estado === 'capturada' || d.estado === 'validada');
+  const porCategoria = groupByCat(conResultado);
+  return `
+    <span class="backlink no-print" onclick="labsysSetView('captura', ${orden.id})">&larr; Volver a captura</span>
+    <div class="card">
+      <div class="informe-header">
+        <div>
+          ${laboratorio.logo ? '<img src="'+laboratorio.logo+'" alt="Logo" style="max-height:130px;max-width:130px;display:block;margin-bottom:8px;">' : ''}
+          <strong>${laboratorio.nombre || 'LabSys'}</strong><div class="refbox">Hoja de validación — uso interno</div>
+          ${laboratorio.direccion ? '<div class="refbox">'+laboratorio.direccion+'</div>' : ''}
+        </div>
+        <div style="text-align:right">
+          <div class="refbox">Folio #${String(orden.id).padStart(4,'0')}</div>
+          <div class="refbox">${new Date(orden.fecha).toLocaleDateString()}</div>
+        </div>
+      </div>
+      <p><strong>${pac.nombres} ${pac.apellidos}</strong> · ${edadTexto(pac.fnac)} · ${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}${orden.medico ? ' · Ref: '+orden.medico : ''}</p>
+      <p class="banner">Este documento es para revisión interna antes de validar en el sistema — no es el informe final para el paciente.</p>
+      ${porCategoria.length === 0 ? '<div class="empty">Todavía no hay resultados capturados en esta orden.</div>' : porCategoria.map(g => `
+        <div class="informe-cat">${g.cat.nombre}</div>
+        <table class="informe-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th></tr></thead><tbody>
+          ${g.items.map(d => {
+            const p = pruebaById(d.prueba_id);
+            const ref = refFor(p, pac);
+            const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
+            return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td><td class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
+          }).join('')}
+        </tbody></table>
+      `).join('')}
+      <div class="firma-block">
+        <div class="firma-linea"></div>
+        <div class="refbox">Revisó (nombre y firma)</div>
+      </div>
+      <div class="no-print" style="margin-top:14px;">
+        <button class="btn" onclick="window.print()">Imprimir / Descargar PDF</button>
+      </div>
+    </div>
+  `;
+}
+
+function viewValidacion() {
+  const listas = ordenes.filter(o => o.estado === 'en_proceso');
+  const orden = ctxOrdenId ? ordenById(Number(ctxOrdenId)) : null;
+  if (!orden) {
+    return `
+      <h1>Validación</h1>
+      <p class="lead">Órdenes con resultados capturados, listas para revisión.</p>
+      <div class="card">
+        ${listas.length === 0 ? '<div class="empty">No hay resultados pendientes de validar.</div>' : `
+        <table><thead><tr><th>Folio</th><th>Paciente</th><th>Capturadas</th></tr></thead><tbody>
+        ${listas.map(o => {
+          const pac = pacienteById(o.paciente_id);
+          const n = o.detalle.filter(d => d.estado === 'capturada').length;
+          return `<tr class="clickrow" onclick="labsysSetView('validacion','${o.id}')">
+            <td>#${String(o.id).padStart(4,'0')}</td><td>${pac.nombres} ${pac.apellidos}</td><td>${n}</td></tr>`;
+        }).join('')}
+        </tbody></table>`}
+      </div>
+    `;
+  }
+  const pac = pacienteById(orden.paciente_id);
+  const capturados = orden.detalle.filter(d => d.estado === 'capturada');
+  const grupos = groupByCat(capturados);
+  return `
+    <span class="backlink" onclick="labsysSetView('validacion')">&larr; Volver</span>
+    <h1>Validar — orden #${String(orden.id).padStart(4,'0')}</h1>
+    <p class="lead">${pac.nombres} ${pac.apellidos} · se muestran solo las pruebas con resultado capturado.</p>
+    <div class="banner no-print">Validando como: <strong>${sesion.nombre}</strong></div>
+    <div class="card">
+      ${grupos.length === 0 ? '<div class="empty">No hay resultados capturados en esta orden.</div>' : grupos.map(g => `
+        <div class="capgroup">
+          <h3>${g.cat.nombre}</h3>
+          <table><thead><tr><th>Prueba</th><th>Resultado</th><th>Capturado por</th></tr></thead><tbody>
+            ${g.items.map(d => {
+              const p = pruebaById(d.prueba_id);
+              const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
+              return `<tr>
+                <td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td>
+                <td class="${d.fuera_de_rango ? 'oor' : ''}">${val} ${p.unidad || ''} ${d.fuera_de_rango ? '<span class="oor">⚠️ fuera de rango</span>' : ''}</td>
+                <td>${d.capturado_por || '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody></table>
+        </div>`).join('')}
+      <button class="btn no-print" id="btn-validar-orden">Validar resultados capturados</button>
+    </div>
+  `;
+}
+
+function viewInforme() {
+  const validas = ordenes.filter(o => o.estado === 'validada' || o.estado === 'entregada');
+  const orden = ctxOrdenId ? ordenById(Number(ctxOrdenId)) : null;
+  if (!orden) {
+    return `
+      <h1>Informe / entrega</h1>
+      <p class="lead">Órdenes validadas, listas para imprimir o entregar.</p>
+      <div class="card">
+        ${validas.length === 0 ? '<div class="empty">Todavía no hay órdenes validadas.</div>' : `
+        <table><thead><tr><th>Folio</th><th>Paciente</th><th>Estado</th></tr></thead><tbody>
+        ${validas.map(o => {
+          const pac = pacienteById(o.paciente_id);
+          return `<tr class="clickrow" onclick="labsysSetView('informe','${o.id}')">
+            <td>#${String(o.id).padStart(4,'0')}</td><td>${pac.nombres} ${pac.apellidos}</td>
+            <td><span class="pill ${o.estado}">${o.estado}</span></td></tr>`;
+        }).join('')}
+        </tbody></table>`}
+      </div>
+    `;
+  }
+  const pac = pacienteById(orden.paciente_id);
+  // Solo las pruebas ya validadas (con resultado real) aparecen en el informe;
+  // las que quedaron pendientes/sin llenar se excluyen automáticamente.
+  const validadas = orden.detalle.filter(d => d.estado === 'validada');
+  const porCategoria = groupByCat(validadas);
+  return `
+    <span class="backlink no-print" onclick="labsysSetView('informe')">&larr; Volver</span>
+    <div class="card">
+      <div class="informe-header">
+        <div>
+          ${laboratorio.logo ? '<img src="'+laboratorio.logo+'" alt="Logo" style="max-height:130px;max-width:130px;display:block;margin-bottom:8px;">' : ''}
+          <strong>${laboratorio.nombre || 'LabSys'}</strong><div class="refbox">Informe de resultados</div>
+          ${laboratorio.direccion ? '<div class="refbox">'+laboratorio.direccion+'</div>' : ''}
+          ${(laboratorio.telefono || laboratorio.correo) ? '<div class="refbox">'+[laboratorio.telefono, laboratorio.correo].filter(Boolean).join(' · ')+'</div>' : ''}
+          ${laboratorio.horario ? '<div class="refbox">'+laboratorio.horario+'</div>' : ''}
+        </div>
+        <div style="text-align:right">
+          <div class="refbox">Folio #${String(orden.id).padStart(4,'0')}</div>
+          <div class="refbox">${new Date(orden.fecha).toLocaleDateString()}</div>
+        </div>
+      </div>
+      <p><strong>${pac.nombres} ${pac.apellidos}</strong> · ${edadTexto(pac.fnac)} · ${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}${orden.medico ? ' · Ref: '+orden.medico : ''}</p>
+      ${porCategoria.length === 0 ? '<div class="empty">Ningún resultado validado todavía.</div>' : porCategoria.map(g => `
+        <div class="informe-cat">${g.cat.nombre}</div>
+        <table class="informe-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th></tr></thead><tbody>
+          ${g.items.map(d => {
+            const p = pruebaById(d.prueba_id);
+            const ref = refFor(p, pac);
+            const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
+            return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td><td class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
+          }).join('')}
+        </tbody></table>
+      `).join('')}
+      <p class="refbox" style="margin-top:20px;">Validado por: ${validadas[0] ? validadas[0].validado_por : '—'} &nbsp;·&nbsp; ${orden.fecha_validacion ? new Date(orden.fecha_validacion).toLocaleString() : ''}</p>
+      <div class="firma-block">
+        <div class="firma-linea"></div>
+        <div class="refbox">Firma y sello</div>
+        <div class="refbox" style="font-weight:600;color:var(--text);">${laboratorio.responsable || 'Química bióloga'}</div>
+      </div>
+      <div class="no-print" style="margin-top:14px;">
+        <button class="btn" onclick="window.print()">Imprimir / PDF</button>
+      </div>
+      ${orden.estado === 'entregada' ? `
+        <p class="refbox" style="margin-top:14px;">Entregado por <strong>${orden.medio_texto || ''}</strong>${orden.entregado_por ? ' · '+orden.entregado_por : ''}${orden.fecha_entrega ? ' · '+new Date(orden.fecha_entrega).toLocaleString() : ''}${orden.receptor ? ' · Recibió: '+orden.receptor : ''}</p>
+      ` : `
+        <div class="card no-print" style="margin-top:14px;background:var(--bg);">
+          <h2 style="font-size:14px;">Registrar entrega</h2>
+          <div class="row">
+            <div><label>Medio de entrega</label>
+              <select id="sel-medio-entrega">
+                <option value="impreso">Impreso en mano</option>
+                <option value="correo">Correo electrónico</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="portal">Portal / en línea</option>
+              </select>
+            </div>
+            <div><label>Recibió (opcional)</label><input type="text" id="input-receptor" placeholder="Nombre de quien recibe"></div>
+          </div>
+          <button class="btn" id="btn-marcar-entregada">Marcar como entregada</button>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function svgBarrasH(items, labelFn, valueFn) {
+  if (items.length === 0) return '';
+  const max = Math.max(...items.map(valueFn), 1);
+  const filas = items.map((it, i) => {
+    const val = valueFn(it);
+    const w = Math.max((val / max) * 260, 2);
+    const y = i * 26;
+    return `
+      <text x="0" y="${y+11}" font-size="11" fill="var(--text)">${labelFn(it)}</text>
+      <rect x="0" y="${y+15}" width="${w}" height="8" rx="3" fill="var(--primary)"></rect>
+      <text x="${w+6}" y="${y+22}" font-size="10" fill="var(--muted)">${val}</text>
+    `;
+  }).join('');
+  return `<svg viewBox="0 0 340 ${items.length*26}" width="100%" style="max-width:420px;">${filas}</svg>`;
+}
+
+function svgBarrasV(items, labelFn, valueFn) {
+  if (items.length === 0) return '';
+  const max = Math.max(...items.map(valueFn), 1);
+  const w = 40, gap = 10, h = 120;
+  const totalW = items.length * (w + gap);
+  const barras = items.map((it, i) => {
+    const val = valueFn(it);
+    const bh = Math.max((val / max) * h, 2);
+    const x = i * (w + gap);
+    return `
+      <rect x="${x}" y="${h - bh}" width="${w}" height="${bh}" rx="3" fill="var(--primary)"></rect>
+      <text x="${x + w/2}" y="${h - bh - 6}" font-size="10" fill="var(--muted)" text-anchor="middle">${val}</text>
+      <text x="${x + w/2}" y="${h + 14}" font-size="9" fill="var(--muted)" text-anchor="middle">${labelFn(it)}</text>
+    `;
+  }).join('');
+  return `<svg viewBox="0 0 ${totalW} ${h+26}" width="100%" style="max-width:520px;">${barras}</svg>`;
+}
+
+function viewReportes() {
+  const todosDetalle = ordenes.flatMap(o => o.detalle.map(d => ({ ...d, orden_id: o.id, paciente_id: o.paciente_id, fecha_orden: o.fecha })));
+  const conResultado = todosDetalle.filter(d => d.estado === 'capturada' || d.estado === 'validada');
+
+  // 1. Resumen general
+  const totalFueraRango = todosDetalle.filter(d => d.fuera_de_rango).length;
+  const resumen = [
+    ['Pacientes registrados', pacientes.length],
+    ['Órdenes totales', ordenes.length],
+    ['Pendientes', ordenes.filter(o => o.estado === 'pendiente').length],
+    ['En proceso', ordenes.filter(o => o.estado === 'en_proceso').length],
+    ['Validadas', ordenes.filter(o => o.estado === 'validada').length],
+    ['Entregadas', ordenes.filter(o => o.estado === 'entregada').length],
+    ['Anuladas', ordenes.filter(o => o.estado === 'anulada').length],
+    ['Resultados capturados', conResultado.length],
+    ['Resultados fuera de rango', totalFueraRango]
+  ];
+
+  // 3. Pruebas más solicitadas
+  const conteoPruebas = {};
+  todosDetalle.forEach(d => { conteoPruebas[d.prueba_id] = (conteoPruebas[d.prueba_id] || 0) + 1; });
+  const pruebasTop = Object.entries(conteoPruebas).map(([id, n]) => ({ prueba: pruebaById(Number(id)), n }))
+    .filter(x => x.prueba).sort((a, b) => b.n - a.n).slice(0, 10);
+
+  // 4. Categorías más solicitadas
+  const conteoCat = {};
+  todosDetalle.forEach(d => {
+    const p = pruebaById(d.prueba_id);
+    if (!p) return;
+    conteoCat[p.categoria_id] = (conteoCat[p.categoria_id] || 0) + 1;
+  });
+  const catTop = Object.entries(conteoCat).map(([id, n]) => ({ cat: CATEGORIAS.find(c => c.id === Number(id)), n }))
+    .filter(x => x.cat).sort((a, b) => b.n - a.n);
+
+  // 5. Resultados fuera de rango recientes
+  const fueraRango = todosDetalle.filter(d => d.fuera_de_rango && d.fecha_captura)
+    .sort((a, b) => new Date(b.fecha_captura) - new Date(a.fecha_captura)).slice(0, 15);
+
+  // 6. Tiempo de validación (horas desde creada hasta validada) + backlog de órdenes abiertas
+  const validadasConTiempo = ordenes.filter(o => o.fecha_validacion).map(o => ({
+    o, horas: (new Date(o.fecha_validacion) - new Date(o.fecha)) / 3600000
+  }));
+  const promedioHoras = validadasConTiempo.length ? (validadasConTiempo.reduce((s, x) => s + x.horas, 0) / validadasConTiempo.length) : null;
+  const abiertas = ordenes.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso')
+    .map(o => ({ o, horas: (new Date() - new Date(o.fecha)) / 3600000 }))
+    .sort((a, b) => b.horas - a.horas).slice(0, 10);
+
+  // 7. Órdenes por médico referente
+  const conteoMedicos = {};
+  ordenes.forEach(o => { const m = (o.medico || '').trim(); if (m) conteoMedicos[m] = (conteoMedicos[m] || 0) + 1; });
+  const medicosTop = Object.entries(conteoMedicos).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  // 8. Producción por usuario
+  const capturas = {}, validaciones = {};
+  todosDetalle.forEach(d => {
+    if (d.capturado_por) capturas[d.capturado_por] = (capturas[d.capturado_por] || 0) + 1;
+    if (d.validado_por) validaciones[d.validado_por] = (validaciones[d.validado_por] || 0) + 1;
+  });
+  const nombresProduccion = [...new Set([...Object.keys(capturas), ...Object.keys(validaciones)])];
+  const produccion = nombresProduccion.map(n => ({ nombre: n, capturas: capturas[n] || 0, validaciones: validaciones[n] || 0 }))
+    .sort((a, b) => (b.capturas + b.validaciones) - (a.capturas + a.validaciones));
+
+  // 9. Pacientes recurrentes
+  const conteoPac = {};
+  ordenes.forEach(o => { conteoPac[o.paciente_id] = (conteoPac[o.paciente_id] || 0) + 1; });
+  const recurrentes = Object.entries(conteoPac).map(([id, n]) => ({ pac: pacienteById(Number(id)), n }))
+    .filter(x => x.pac && x.n > 1).sort((a, b) => b.n - a.n).slice(0, 10);
+
+  // 10. Volumen de órdenes por mes
+  const conteoMes = {};
+  ordenes.forEach(o => { const m = o.fecha.slice(0, 7); conteoMes[m] = (conteoMes[m] || 0) + 1; });
+  const volumenMensual = Object.entries(conteoMes).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
+
+  return `
+    <h1>Reportes</h1>
+    <p class="lead">Calculados en el momento a partir de los datos actuales del sistema.</p>
+
+    <div class="card">
+      <h2>1. Resumen general</h2>
+      <div style="margin-bottom:16px;">${svgBarrasH(
+        [['Pendientes', ordenes.filter(o=>o.estado==='pendiente').length],
+         ['En proceso', ordenes.filter(o=>o.estado==='en_proceso').length],
+         ['Validadas', ordenes.filter(o=>o.estado==='validada').length],
+         ['Entregadas', ordenes.filter(o=>o.estado==='entregada').length],
+         ['Anuladas', ordenes.filter(o=>o.estado==='anulada').length]],
+        x => x[0], x => x[1]
+      )}</div>
+      <table><tbody>
+        ${resumen.map(([label, val]) => `<tr><td>${label}</td><td style="text-align:right;font-weight:600;">${val}</td></tr>`).join('')}
+      </tbody></table>
+    </div>
+
+    <div class="card">
+      <h2>2. Pruebas más solicitadas</h2>
+      ${pruebasTop.length === 0 ? '<div class="empty">Todavía no hay datos.</div>' : `
+      <div style="margin-bottom:16px;">${svgBarrasH(pruebasTop, x => x.prueba.nombre.length > 24 ? x.prueba.nombre.slice(0,24)+'…' : x.prueba.nombre, x => x.n)}</div>
+      <table><thead><tr><th>Prueba</th><th>Categoría</th><th style="text-align:right;">Veces solicitada</th></tr></thead><tbody>
+        ${pruebasTop.map(x => `<tr><td>${x.prueba.nombre}</td><td class="refbox">${CATEGORIAS.find(c=>c.id===x.prueba.categoria_id)?.nombre || '—'}</td><td style="text-align:right;">${x.n}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+
+    <div class="card">
+      <h2>3. Categorías más solicitadas</h2>
+      ${catTop.length === 0 ? '<div class="empty">Todavía no hay datos.</div>' : `
+      <div style="margin-bottom:16px;">${svgBarrasH(catTop.slice(0,10), x => x.cat.nombre.length > 24 ? x.cat.nombre.slice(0,24)+'…' : x.cat.nombre, x => x.n)}</div>
+      <table><thead><tr><th>Categoría</th><th style="text-align:right;">Pruebas solicitadas</th></tr></thead><tbody>
+        ${catTop.map(x => `<tr><td>${x.cat.nombre}</td><td style="text-align:right;">${x.n}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+
+    <div class="card">
+      <h2>4. Resultados fuera de rango recientes</h2>
+      ${fueraRango.length === 0 ? '<div class="empty">Sin resultados fuera de rango registrados.</div>' : `
+      <table><thead><tr><th>Paciente</th><th>Prueba</th><th>Resultado</th><th>Fecha</th></tr></thead><tbody>
+        ${fueraRango.map(d => {
+          const p = pruebaById(d.prueba_id); const pac = pacienteById(d.paciente_id);
+          const val = p.tipo === 'numerico' ? d.valor_numerico : d.valor_texto;
+          return `<tr><td>${pac ? pac.nombres+' '+pac.apellidos : '—'}</td><td>${p.nombre}</td><td class="oor">⚠️ ${val} ${p.unidad||''}</td><td class="refbox">${new Date(d.fecha_captura).toLocaleDateString()}</td></tr>`;
+        }).join('')}
+      </tbody></table>`}
+    </div>
+
+    <div class="card">
+      <h2>5. Tiempo de validación</h2>
+      <p class="refbox">Promedio desde que se crea la orden hasta que se valida: <strong>${promedioHoras !== null ? promedioHoras.toFixed(1)+' horas' : 'sin datos todavía'}</strong></p>
+      <h3 style="font-size:13px;margin-top:14px;">Órdenes abiertas con más tiempo esperando (posible atraso)</h3>
+      ${abiertas.length === 0 ? '<div class="empty">No hay órdenes abiertas.</div>' : `
+      <table><thead><tr><th>Folio</th><th>Paciente</th><th>Estado</th><th style="text-align:right;">Horas abierta</th></tr></thead><tbody>
+        ${abiertas.map(x => { const pac = pacienteById(x.o.paciente_id); return `<tr><td>#${String(x.o.id).padStart(4,'0')}</td><td>${pac ? pac.nombres+' '+pac.apellidos : '—'}</td><td><span class="pill ${x.o.estado}">${x.o.estado.replace('_',' ')}</span></td><td style="text-align:right;">${x.horas.toFixed(1)}</td></tr>`; }).join('')}
+      </tbody></table>`}
+    </div>
+
+    <div class="card">
+      <h2>6. Órdenes por médico referente</h2>
+      ${medicosTop.length === 0 ? '<div class="empty">Ninguna orden tiene médico referente registrado.</div>' : `
+      <table><thead><tr><th>Médico</th><th style="text-align:right;">Órdenes</th></tr></thead><tbody>
+        ${medicosTop.map(([nombre, n]) => `<tr><td>${nombre}</td><td style="text-align:right;">${n}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+
+    <div class="card">
+      <h2>7. Producción por usuario</h2>
+      ${produccion.length === 0 ? '<div class="empty">Todavía no hay capturas ni validaciones.</div>' : `
+      <table><thead><tr><th>Usuario</th><th style="text-align:right;">Resultados capturados</th><th style="text-align:right;">Resultados validados</th></tr></thead><tbody>
+        ${produccion.map(x => `<tr><td>${x.nombre}</td><td style="text-align:right;">${x.capturas}</td><td style="text-align:right;">${x.validaciones}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+
+    <div class="card">
+      <h2>8. Pacientes recurrentes</h2>
+      ${recurrentes.length === 0 ? '<div class="empty">Todavía ningún paciente tiene más de una orden.</div>' : `
+      <table><thead><tr><th>Paciente</th><th style="text-align:right;">Órdenes</th></tr></thead><tbody>
+        ${recurrentes.map(x => `<tr><td>${x.pac.nombres} ${x.pac.apellidos}</td><td style="text-align:right;">${x.n}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+
+    <div class="card">
+      <h2>9. Volumen de órdenes por mes</h2>
+      ${volumenMensual.length === 0 ? '<div class="empty">Todavía no hay órdenes.</div>' : `
+      <div style="margin-bottom:16px;overflow-x:auto;">${svgBarrasV(volumenMensual, x => x[0].slice(2), x => x[1])}</div>
+      <table><thead><tr><th>Mes</th><th style="text-align:right;">Órdenes creadas</th></tr></thead><tbody>
+        ${volumenMensual.map(([mes, n]) => `<tr><td>${mes}</td><td style="text-align:right;">${n}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div>
+
+    <div class="card">
+      <h2>10. Catálogo activo vs. inactivo</h2>
+      <table><tbody>
+        <tr><td>Pruebas activas</td><td style="text-align:right;font-weight:600;">${PRUEBAS.filter(p => p.activo !== false).length}</td></tr>
+        <tr><td>Pruebas desactivadas</td><td style="text-align:right;font-weight:600;">${PRUEBAS.filter(p => p.activo === false).length}</td></tr>
+        <tr><td>Categorías</td><td style="text-align:right;font-weight:600;">${CATEGORIAS.length}</td></tr>
+        <tr><td>Médicos registrados</td><td style="text-align:right;font-weight:600;">${medicos.length}</td></tr>
+      </tbody></table>
+    </div>
+  `;
+}
+
+// ---------- Event handlers ----------
+
+function attachHandlers() {
+  const flg = document.getElementById('form-login');
+  if (flg) flg.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(flg);
+    const { error } = await supabase.auth.signInWithPassword({ email: fd.get('correo').trim(), password: fd.get('password') });
+    if (error) { loginError = 'Correo o contraseña incorrectos.'; render(); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    await onAuthed(user);
+  });
+
+  const fsg = document.getElementById('form-signup');
+  if (fsg) fsg.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(fsg);
+    const { error } = await supabase.auth.signUp({
+      email: fd.get('correo').trim(), password: fd.get('password'),
+      options: { data: { nombre: fd.get('nombre') } }
+    });
+    if (error) { loginError = error.message; render(); return; }
+    loginError = '';
+    mostrarSignup = false;
+    toast('Cuenta creada. Ya puedes iniciar sesión.');
+    render();
+  });
+
+  const fmp = document.getElementById('form-mi-password');
+  if (fmp) fmp.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(fmp);
+    if (fd.get('password') !== fd.get('password2')) { toast('Las contraseñas no coinciden'); return; }
+    const { error } = await supabase.auth.updateUser({ password: fd.get('password') });
+    if (error) { toast('Error: ' + error.message); return; }
+    logAccion('Cambió su contraseña', '');
+    toast('Contraseña actualizada'); fmp.reset();
+  });
+
+  document.querySelectorAll('[data-rol-usuario]').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const uid = sel.dataset.rolUsuario;
+      const { error } = await supabase.from('perfiles').update({ rol: sel.value }).eq('id', uid);
+      if (error) { toast('Error: ' + error.message); return; }
+      const u = usuarios.find(x => x.id === uid);
+      u.rol = sel.value;
+      logAccion('Cambió rol de usuario', u.correo + ' → ' + sel.value);
+      toast('Rol actualizado');
+    });
+  });
+
+  document.querySelectorAll('[data-toggle-usuario]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const uid = btn.dataset.toggleUsuario;
+      const u = usuarios.find(x => x.id === uid);
+      const nuevo = u.activo === false ? true : false;
+      const { error } = await supabase.from('perfiles').update({ activo: nuevo }).eq('id', uid);
+      if (error) { toast('Error: ' + error.message); return; }
+      u.activo = nuevo;
+      logAccion(nuevo ? 'Activó usuario' : 'Desactivó usuario', u.correo);
+      render();
+    });
+  });
+
+  const searchInput = document.getElementById('global-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      document.getElementById('global-search-results').innerHTML = renderBusquedaResultados(searchInput.value);
+    });
+  }
+
+  const buscador = document.getElementById('buscador-pruebas');
+  if (buscador) buscador.addEventListener('input', () => {
+    const q = buscador.value.trim().toLowerCase();
+    document.querySelectorAll('#labsys-root .catgroup').forEach(det => {
+      const catNameEl = det.querySelector('.catname');
+      const catMatch = !!q && catNameEl && catNameEl.textContent.toLowerCase().includes(q);
+      let visibles = 0;
+      det.querySelectorAll('.testrow').forEach(row => {
+        const label = row.querySelector('label');
+        const match = !q || catMatch || label.textContent.toLowerCase().includes(q);
+        row.style.display = match ? 'flex' : 'none';
+        if (match) visibles++;
+      });
+      det.style.display = (q && visibles === 0) ? 'none' : '';
+      if (q) det.open = visibles > 0;
+    });
+  });
+
+  const selCat = document.getElementById('prueba-categoria');
+  if (selCat) selCat.addEventListener('change', () => {
+    document.getElementById('prueba-categoria-nueva').style.display = selCat.value === 'nueva' ? 'block' : 'none';
+  });
+
+  const chkSexo = document.getElementById('prueba-distinto-sexo');
+  if (chkSexo) chkSexo.addEventListener('change', () => {
+    document.getElementById('ref-unico').style.display = chkSexo.checked ? 'none' : 'block';
+    document.getElementById('ref-doble').style.display = chkSexo.checked ? 'block' : 'none';
+  });
+
+  const fpr = document.getElementById('form-prueba');
+  if (fpr) fpr.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(fpr);
+    let categoriaId = fd.get('categoria_id');
+    if (categoriaId === 'nueva') {
+      const nombreCat = document.getElementById('prueba-categoria-nueva').value.trim();
+      if (!nombreCat) { toast('Escribe el nombre de la categoría nueva'); return; }
+      const { data: catData, error: catErr } = await supabase.from('categorias').insert({ nombre: nombreCat, orden: CATEGORIAS.length + 1 }).select().single();
+      if (catErr) { toast('Error: ' + catErr.message); return; }
+      CATEGORIAS.push(catData);
+      categoriaId = catData.id;
+    } else categoriaId = Number(categoriaId);
+
+    const tipo = fd.get('tipo');
+    let refRows = [];
+    if (tipo !== 'texto') {
+      if (document.getElementById('prueba-distinto-sexo').checked) {
+        const mMin = document.getElementById('ref-m-min').value, mMax = document.getElementById('ref-m-max').value, mTxt = document.getElementById('ref-m-texto').value.trim();
+        const fMin = document.getElementById('ref-f-min').value, fMax = document.getElementById('ref-f-max').value, fTxt = document.getElementById('ref-f-texto').value.trim();
+        const rm = { sexo: 'M', valor_min: mMin !== '' ? Number(mMin) : null, valor_max: mMax !== '' ? Number(mMax) : null, texto_referencia: mTxt || null };
+        const rf = { sexo: 'F', valor_min: fMin !== '' ? Number(fMin) : null, valor_max: fMax !== '' ? Number(fMax) : null, texto_referencia: fTxt || null };
+        if (rm.valor_min !== null || rm.valor_max !== null || rm.texto_referencia) refRows.push(rm);
+        if (rf.valor_min !== null || rf.valor_max !== null || rf.texto_referencia) refRows.push(rf);
+      } else {
+        const aMin = document.getElementById('ref-a-min').value, aMax = document.getElementById('ref-a-max').value, aTxt = document.getElementById('ref-a-texto').value.trim();
+        const ra = { sexo: 'A', valor_min: aMin !== '' ? Number(aMin) : null, valor_max: aMax !== '' ? Number(aMax) : null, texto_referencia: aTxt || null };
+        if (ra.valor_min !== null || ra.valor_max !== null || ra.texto_referencia) refRows.push(ra);
+      }
+    }
+
+    const idField = fd.get('id');
+    let pruebaId;
+    if (idField) {
+      pruebaId = Number(idField);
+      const { error } = await supabase.from('pruebas').update({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo }).eq('id', pruebaId);
+      if (error) { toast('Error: ' + error.message); return; }
+      await supabase.from('valores_referencia').delete().eq('prueba_id', pruebaId);
+    } else {
+      const { data, error } = await supabase.from('pruebas').insert({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true }).select().single();
+      if (error) { toast('Error: ' + error.message); return; }
+      pruebaId = data.id;
+    }
+    if (refRows.length) {
+      refRows = refRows.map(r => ({ ...r, prueba_id: pruebaId }));
+      await supabase.from('valores_referencia').insert(refRows);
+    }
+    const { data: freshRef } = await supabase.from('valores_referencia').select('*').eq('prueba_id', pruebaId);
+    const mappedRef = (freshRef || []).map(r => ({
+      sexo: r.sexo, min: r.valor_min ?? undefined, max: r.valor_max ?? undefined,
+      texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined
+    }));
+    const idx = PRUEBAS.findIndex(p => p.id === pruebaId);
+    const pruebaObj = { id: pruebaId, categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true, ref: mappedRef };
+    if (idx >= 0) PRUEBAS[idx] = { ...PRUEBAS[idx], ...pruebaObj }; else PRUEBAS.push(pruebaObj);
+    toast(idField ? 'Prueba actualizada' : 'Prueba agregada al catálogo');
+    logAccion(idField ? 'Editó prueba del catálogo' : 'Agregó prueba al catálogo', pruebaObj.nombre);
+    labsysCatalogo();
+  });
+
+  document.querySelectorAll('[data-toggle-activo]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const p = pruebaById(Number(btn.dataset.toggleActivo));
+      const nuevoActivo = p.activo === false ? true : false;
+      const { error } = await supabase.from('pruebas').update({ activo: nuevoActivo }).eq('id', p.id);
+      if (error) { toast('Error: ' + error.message); return; }
+      p.activo = nuevoActivo;
+      logAccion(nuevoActivo ? 'Activó prueba' : 'Desactivó prueba', p.nombre);
+      render();
+    });
+  });
+
+  const fp = document.getElementById('form-paciente');
+  if (fp) fp.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(fp);
+    const idField = fd.get('id');
+    const editandoId = idField ? Number(idField) : null;
+    const fnacVal = fd.get('fnac');
+    const nombresVal = fd.get('nombres').trim();
+    const apellidosVal = fd.get('apellidos').trim();
+
+    const porNombre = pacientes.find(p =>
+      p.nombres.trim().toLowerCase() === nombresVal.toLowerCase() &&
+      p.apellidos.trim().toLowerCase() === apellidosVal.toLowerCase() &&
+      p.fnac === fnacVal && p.id !== editandoId
+    );
+    if (porNombre) {
+      const continuar = confirm('Ya existe un paciente con el mismo nombre y fecha de nacimiento (' + porNombre.nombres + ' ' + porNombre.apellidos + '). ¿Deseas continuar de todas formas?');
+      if (!continuar) return;
+    }
+
+    if (editandoId) {
+      const patch = { nombres: nombresVal, apellidos: apellidosVal, fecha_nacimiento: fnacVal, sexo: fd.get('sexo'), direccion: fd.get('direccion') || null, telefono: fd.get('telefono') || null };
+      const { error } = await supabase.from('pacientes').update(patch).eq('id', editandoId);
+      if (error) { toast('Error: ' + error.message); return; }
+      const p = pacienteById(editandoId);
+      Object.assign(p, { nombres: nombresVal, apellidos: apellidosVal, fnac: fnacVal, sexo: fd.get('sexo'), direccion: fd.get('direccion'), telefono: fd.get('telefono') });
+      toast('Paciente actualizado');
+      logAccion('Editó paciente', nombresVal + ' ' + apellidosVal);
+      ctxPacienteEdit = null; render();
+    } else {
+      const { data, error } = await supabase.from('pacientes').insert({
+        nombres: nombresVal, apellidos: apellidosVal, fecha_nacimiento: fnacVal,
+        sexo: fd.get('sexo'), direccion: fd.get('direccion') || null, telefono: fd.get('telefono') || null
+      }).select().single();
+      if (error) { toast('Error al guardar: ' + error.message); return; }
+      const p = { id: data.id, nombres: data.nombres, apellidos: data.apellidos, fnac: data.fecha_nacimiento, sexo: data.sexo, direccion: data.direccion, telefono: data.telefono };
+      pacientes.push(p); toast('Paciente guardado');
+      logAccion('Registró paciente', nombresVal + ' ' + apellidosVal);
+      setView('nueva-orden', p.id);
+    }
+  });
+
+  const fm = document.getElementById('form-medico');
+  if (fm) fm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(fm);
+    const idField = fd.get('id');
+    if (idField) {
+      const patch = { nombre: fd.get('nombre'), colegiado: fd.get('colegiado') || null, telefono: fd.get('telefono') || null };
+      const { error } = await supabase.from('medicos').update(patch).eq('id', Number(idField));
+      if (error) { toast('Error: ' + error.message); return; }
+      const m = medicoById(Number(idField));
+      Object.assign(m, patch);
+      toast('Médico actualizado');
+      logAccion('Editó médico', m.nombre);
+      ctxMedicoEdit = null; render();
+    } else {
+      const { data, error } = await supabase.from('medicos').insert({ nombre: fd.get('nombre'), colegiado: fd.get('colegiado') || null, telefono: fd.get('telefono') || null }).select().single();
+      if (error) { toast('Error: ' + error.message); return; }
+      medicos.push(data); toast('Médico guardado');
+      logAccion('Registró médico', data.nombre);
+      fm.reset(); render();
+    }
+  });
+
+  const fl = document.getElementById('form-laboratorio');
+  if (fl) fl.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(fl);
+    const patch = { nombre: fd.get('nombre'), direccion: fd.get('direccion'), nit: fd.get('nit'),
+      telefono: fd.get('telefono'), correo: fd.get('correo'), sitio_web: fd.get('sitio_web'),
+      horario: fd.get('horario'), responsable: fd.get('responsable') };
+
+    const logoInput = document.getElementById('logo-input');
+    const logoQuitar = document.getElementById('logo-quitar');
+    if (logoQuitar && logoQuitar.checked) {
+      patch.logo = null;
+    } else if (logoInput && logoInput.files && logoInput.files[0]) {
+      const file = logoInput.files[0];
+      if (file.size > 800000) { toast('La imagen es muy grande — usa una menor a 800 KB'); return; }
+      patch.logo = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    } else {
+      patch.logo = laboratorio.logo || null;
+    }
+
+    const { error } = await supabase.from('laboratorio_config').update(patch).eq('id', 1);
+    if (error) { toast('Error: ' + error.message); return; }
+    laboratorio = { ...laboratorio, ...patch };
+    toast('Datos del laboratorio guardados');
+    logAccion('Actualizó datos del laboratorio', '');
+    render();
+  });
+
+  const btnCrear = document.getElementById('btn-crear-orden');
+  if (btnCrear) btnCrear.addEventListener('click', async () => {
+    const pacId = document.getElementById('sel-paciente').value;
+    if (!pacId) { toast('Selecciona un paciente'); return; }
+    const checks = Array.from(document.querySelectorAll('.chk-prueba:checked'));
+    if (checks.length === 0) { toast('Selecciona al menos una prueba'); return; }
+    const medicoNombre = document.getElementById('orden-medico').value.trim();
+    const { data: ordenData, error: ordErr } = await supabase.from('ordenes').insert({
+      paciente_id: Number(pacId), medico_nombre: medicoNombre || null, usuario_recepcion: sesion.id, estado: 'pendiente'
+    }).select().single();
+    if (ordErr) { toast('Error: ' + ordErr.message); return; }
+    const detalleRows = checks.map(c => ({ orden_id: ordenData.id, prueba_id: Number(c.value), estado: 'pendiente' }));
+    const { data: detData, error: detErr } = await supabase.from('orden_detalle').insert(detalleRows).select();
+    if (detErr) { toast('Error: ' + detErr.message); return; }
+    const orden = { id: ordenData.id, paciente_id: ordenData.paciente_id, fecha: ordenData.fecha, medico: ordenData.medico_nombre, estado: ordenData.estado, detalle: detData };
+    ordenes.push(orden);
+    toast('Orden #' + String(orden.id).padStart(4,'0') + ' creada con ' + checks.length + ' pruebas');
+    logAccion('Creó orden', 'Folio #' + String(orden.id).padStart(4,'0') + ' — ' + checks.length + ' pruebas');
+    setView('captura', orden.id);
+  });
+
+  const btnGuardarCaptura = document.getElementById('btn-guardar-captura');
+  if (btnGuardarCaptura) btnGuardarCaptura.addEventListener('click', async () => {
+    const u = sesion.nombre;
+    const orden = ordenById(Number(ctxOrdenId));
+    const pac = pacienteById(orden.paciente_id);
+    let n = 0;
+    for (const d of orden.detalle) {
+      if (d.estado === 'validada') continue;
+      const inp = document.querySelector(`.cap-input[data-id="${d.prueba_id}"]`);
+      const notaInp = document.querySelector(`.cap-nota[data-id="${d.prueba_id}"]`);
+      if (!inp) continue;
+      const nota = notaInp ? notaInp.value.trim() : '';
+      const patch = {};
+      let cambioResultado = false;
+      if (inp.value !== '') {
+        const p = pruebaById(d.prueba_id);
+        if (p.tipo === 'numerico') {
+          patch.valor_numerico = Number(inp.value);
+          const ref = refFor(p, pac);
+          patch.fuera_de_rango = !!(ref && ((ref.min !== undefined && patch.valor_numerico < ref.min) || (ref.max !== undefined && patch.valor_numerico > ref.max)));
+        } else {
+          patch.valor_texto = inp.value;
+          patch.fuera_de_rango = false;
+        }
+        patch.estado = 'capturada';
+        patch.capturado_por = u;
+        patch.fecha_captura = new Date().toISOString();
+        cambioResultado = true;
+      }
+      patch.observaciones = nota || null;
+      if (!cambioResultado && nota === (d.observaciones || '')) continue;
+      const { error } = await supabase.from('orden_detalle').update(patch).eq('id', d.id);
+      if (error) { toast('Error: ' + error.message); continue; }
+      Object.assign(d, patch);
+      if (patch.observaciones === null) delete d.observaciones;
+      if (cambioResultado) n++;
+    }
+    if (orden.estado === 'pendiente' && n > 0) {
+      await supabase.from('ordenes').update({ estado: 'en_proceso' }).eq('id', orden.id);
+      orden.estado = 'en_proceso';
+    }
+    toast(n + ' resultado(s) guardados');
+    if (n > 0) logAccion('Capturó resultados', 'Orden #' + String(orden.id).padStart(4,'0') + ' — ' + n + ' resultado(s)');
+    render();
+  });
+
+  const btnValidar = document.getElementById('btn-validar-orden');
+  if (btnValidar) btnValidar.addEventListener('click', async () => {
+    const u = sesion.nombre;
+    const orden = ordenById(Number(ctxOrdenId));
+    const now = new Date().toISOString();
+    const aValidar = orden.detalle.filter(d => d.estado === 'capturada');
+    for (const d of aValidar) {
+      const { error } = await supabase.from('orden_detalle').update({ estado: 'validada', validado_por: u, fecha_validacion: now }).eq('id', d.id);
+      if (!error) { d.estado = 'validada'; d.validado_por = u; d.fecha_validacion = now; }
+    }
+    await supabase.from('ordenes').update({ estado: 'validada', fecha_validacion: now }).eq('id', orden.id);
+    orden.estado = 'validada'; orden.fecha_validacion = now;
+    toast(aValidar.length + ' resultado(s) validados');
+    logAccion('Validó orden', 'Folio #' + String(orden.id).padStart(4,'0') + ' — ' + aValidar.length + ' resultado(s)');
+    setView('validacion');
+  });
+
+  const btnEntregada = document.getElementById('btn-marcar-entregada');
+  if (btnEntregada) btnEntregada.addEventListener('click', async () => {
+    const orden = ordenById(Number(ctxOrdenId));
+    const medioSel = document.getElementById('sel-medio-entrega');
+    const medioTextos = { impreso: 'Impreso en mano', correo: 'Correo electrónico', whatsapp: 'WhatsApp', portal: 'Portal / en línea' };
+    const medio = medioSel ? medioSel.value : 'impreso';
+    const patch = {
+      estado: 'entregada', medio_entrega: medio, medio_texto: medioTextos[medio],
+      receptor: document.getElementById('input-receptor').value.trim(),
+      entregado_por: sesion.nombre, fecha_entrega: new Date().toISOString()
+    };
+    const { error } = await supabase.from('ordenes').update(patch).eq('id', orden.id);
+    if (error) { toast('Error: ' + error.message); return; }
+    Object.assign(orden, patch);
+    toast('Marcada como entregada');
+    logAccion('Marcó entregada', 'Folio #' + String(orden.id).padStart(4,'0') + ' — ' + orden.medio_texto);
+    render();
+  });
+
+  document.querySelectorAll('[data-anular-orden]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const motivo = prompt('¿Por qué se anula esta orden?');
+      if (motivo === null) return;
+      if (!motivo.trim()) { toast('Escribe un motivo para anular'); return; }
+      const orden = ordenById(Number(btn.dataset.anularOrden));
+      const patch = { estado: 'anulada', motivo_anulacion: motivo.trim(), anulada_por: sesion.nombre, fecha_anulacion: new Date().toISOString() };
+      const { error } = await supabase.from('ordenes').update(patch).eq('id', orden.id);
+      if (error) { toast('Error: ' + error.message); return; }
+      Object.assign(orden, patch);
+      toast('Orden anulada');
+      logAccion('Anuló orden', 'Folio #' + String(orden.id).padStart(4,'0') + ' — Motivo: ' + orden.motivo_anulacion);
+      render();
+    });
+  });
+}
+
+
+init();
+})();
+</script>
