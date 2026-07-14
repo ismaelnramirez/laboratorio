@@ -80,6 +80,14 @@
 #labsys-root .pill.validada { background: var(--primary-light); color: var(--primary-dark); }
 #labsys-root .pill.entregada { background: #EAF3DE; color: #27500A; }
 #labsys-root .pill.anulada { background: var(--danger-light); color: var(--danger); text-decoration: line-through; }
+#labsys-root .watermark-anulado {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-22deg);
+  font-size: 78px; font-weight: 800; color: rgba(163,45,45,.28);
+  letter-spacing: 6px; white-space: nowrap; pointer-events: none; z-index: 5;
+  border: 7px solid rgba(163,45,45,.28); padding: 8px 34px; border-radius: 14px;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+@media (max-width: 700px) { #labsys-root .watermark-anulado { font-size: 42px; padding: 6px 18px; border-width: 5px; } }
 #labsys-root .clickrow { cursor: pointer; }
 #labsys-root .clickrow:hover { background: var(--bg); }
 #labsys-root .empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
@@ -263,19 +271,23 @@ async function mostrarVerificacionPublica(codigo) {
   root.innerHTML = '<div class="login-wrap"><div class="login-card"><p class="lead">Verificando…</p></div></div>';
   const { data, error } = await supabase.rpc('verificar_informe', { p_codigo: codigo });
   const resultado = (data && data[0]) || null;
-  const estadoTexto = { validada: 'Válido', entregada: 'Válido', anulada: 'Anulado' };
+  const esAnulado = resultado && resultado.estado === 'anulada';
   root.innerHTML = `
     <div class="login-wrap"><div class="login-card">
       <div class="brand" style="border:none;padding:0 0 16px;"><div class="name">LabSys</div><div class="sub">Verificación de informe</div></div>
       ${(error || !resultado) ? `
         <p class="refbox oor">No se encontró ningún informe con este código. Puede que el enlace esté mal escrito o el documento no sea válido.</p>
       ` : `
+        <div style="text-align:center;margin:6px 0 18px;padding:16px;border-radius:12px;background:${esAnulado ? 'var(--danger-light)' : 'var(--primary-light)'};">
+          <div style="font-size:26px;font-weight:800;letter-spacing:.04em;color:${esAnulado ? 'var(--danger)' : 'var(--primary-dark)'};">
+            ${esAnulado ? '✕ ANULADO' : '✓ VÁLIDO'}
+          </div>
+        </div>
         <table><tbody>
           <tr><td class="refbox">Laboratorio</td><td style="text-align:right;font-weight:600;">${resultado.laboratorio}</td></tr>
           <tr><td class="refbox">Folio</td><td style="text-align:right;font-weight:600;">${resultado.folio}</td></tr>
           <tr><td class="refbox">Paciente</td><td style="text-align:right;font-weight:600;">${resultado.paciente}</td></tr>
           <tr><td class="refbox">Validado</td><td style="text-align:right;font-weight:600;">${resultado.fecha_validacion ? new Date(resultado.fecha_validacion).toLocaleString() : '—'}</td></tr>
-          <tr><td class="refbox">Estado</td><td style="text-align:right;"><span class="pill ${resultado.estado==='anulada'?'anulada':'validada'}">${estadoTexto[resultado.estado] || resultado.estado}</span></td></tr>
         </tbody></table>
         <p class="refbox" style="margin-top:14px;">Este documento fue emitido y validado por el laboratorio. Este resumen no incluye resultados clínicos por privacidad del paciente.</p>
       `}
@@ -1137,7 +1149,7 @@ function viewValidacion() {
 }
 
 function viewInforme() {
-  const validas = ordenes.filter(o => o.estado === 'validada' || o.estado === 'entregada');
+  const validas = ordenes.filter(o => o.estado === 'validada' || o.estado === 'entregada' || o.estado === 'anulada');
   const orden = ctxOrdenId ? ordenById(Number(ctxOrdenId)) : null;
   if (!orden) {
     return `
@@ -1163,7 +1175,8 @@ function viewInforme() {
   const porCategoria = groupByCat(validadas);
   return `
     <span class="backlink no-print" onclick="labsysSetView('informe')">&larr; Volver</span>
-    <div class="card">
+    <div class="card" style="position:relative;overflow:hidden;">
+      ${orden.estado === 'anulada' ? '<div class="watermark-anulado">ANULADO</div>' : ''}
       <div class="informe-header">
         <div>
           ${laboratorio.logo ? '<img src="'+laboratorio.logo+'" alt="Logo" style="max-height:130px;max-width:130px;display:block;margin-bottom:8px;">' : ''}
@@ -1195,6 +1208,7 @@ function viewInforme() {
         </tbody></table>
       `).join('')}
       <p class="refbox" style="margin-top:20px;">Validado por: ${validadas[0] ? validadas[0].validado_por : '—'} &nbsp;·&nbsp; ${orden.fecha_validacion ? new Date(orden.fecha_validacion).toLocaleString() : ''}</p>
+      ${orden.estado === 'anulada' ? `<p class="refbox oor" style="font-weight:600;">Anulado por: ${orden.anulada_por || '—'} · ${orden.fecha_anulacion ? new Date(orden.fecha_anulacion).toLocaleString() : ''}${orden.motivo_anulacion ? ' · Motivo: '+orden.motivo_anulacion : ''}</p>` : ''}
       <div class="firma-block">
         <div class="firma-linea"></div>
         <div class="refbox">Firma y sello</div>
