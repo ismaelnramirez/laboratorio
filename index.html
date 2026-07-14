@@ -38,13 +38,17 @@
 #labsys-root .brand .name { font-size: 16px; font-weight: 600; color: var(--primary-dark); }
 #labsys-root .brand .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 #labsys-root .navbtn {
-  display: block; width: 100%; text-align: left; padding: 10px 20px;
-  background: none; border: none; font-size: 14px; color: var(--text);
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 20px;
+  background: none; border: none; font-size: 13.5px; color: var(--text);
   cursor: pointer; border-left: 3px solid transparent;
 }
+#labsys-root .navbtn svg { flex-shrink: 0; opacity: .8; }
 #labsys-root .navbtn:hover { background: var(--primary-light); }
 #labsys-root .navbtn.active { background: var(--primary-light); border-left-color: var(--primary); color: var(--primary-dark); font-weight: 600; }
-#labsys-root .navbtn .count { float: right; color: var(--muted); font-size: 12px; }
+#labsys-root .navbtn.active svg { opacity: 1; }
+#labsys-root .navbtn .count { margin-left: auto; color: var(--muted); font-size: 12px; }
+#labsys-root .nav-header { padding: 14px 20px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+#labsys-root .nav-divider { height: 1px; background: var(--border); margin: 8px 16px; }
 #labsys-root .main { flex: 1; padding: 66px 36px 28px; max-width: 1000px; }
 #labsys-root h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
 #labsys-root .lead { color: var(--muted); font-size: 13px; margin: 0 0 22px; }
@@ -360,6 +364,26 @@ function logAccion(accion, detalle) {
   }).then(() => {});
 }
 
+const NAV_ICONS = {
+  pacientes: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'nueva-orden': '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/>',
+  captura: '<path d="M9 2v6L4 18a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-10V2"/><path d="M9 2h6"/><path d="M7.5 15h9"/>',
+  validacion: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12l3 3 5-6"/>',
+  informe: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/>',
+  ordenes: '<path d="M9 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h6"/>',
+  buscar: '<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>',
+  medicos: '<path d="M6 3v9a4 4 0 0 0 8 0V3"/><path d="M4 3h4"/><path d="M14 3h4"/><circle cx="18" cy="15" r="3"/>',
+  reportes: '<path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/>',
+  catalogo: '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
+  laboratorio: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>',
+  usuarios: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  bitacora: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+  'mi-cuenta': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
+};
+function navIcon(id) {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${NAV_ICONS[id] || ''}</svg>`;
+}
+
 function qrTag(data, cellSize) {
   try {
     const qr = qrcode(0, 'M');
@@ -456,29 +480,44 @@ function render() {
   if (!puedeVer(view)) view = vistaInicial();
 
   const enProceso = ordenes.filter(o => o.estado === 'en_proceso').length;
-  const nav = [
-    ['buscar','Buscar', null],
-    ['pacientes','Pacientes', pacientes.length || null],
-    ['medicos','Médicos', medicos.length || null],
-    ['nueva-orden','Nueva orden', null],
-    ['ordenes','Órdenes', ordenes.length || null],
-    ['captura','Captura', null],
-    ['validacion','Validación', enProceso || null],
-    ['informe','Informe / entrega', null],
-    ['reportes','Reportes', null],
-    ['catalogo','Catálogo de pruebas', null],
-    ['laboratorio','Laboratorio', null],
-    ['usuarios','Usuarios', null],
-    ['bitacora','Bitácora', null],
-    ['mi-cuenta','Mi cuenta', null]
-  ].filter(([id]) => puedeVer(id));
+  const gruposNav = [
+    { header: 'Trabajo diario', items: [
+      ['pacientes','1. Pacientes', pacientes.length || null],
+      ['nueva-orden','2. Nueva orden', null],
+      ['captura','3. Captura', null],
+      ['validacion','4. Validación', enProceso || null],
+      ['informe','5. Informe / entrega', null],
+    ]},
+    { dividerBefore: true, items: [
+      ['ordenes','Órdenes', ordenes.length || null],
+      ['buscar','Buscar', null],
+      ['medicos','Médicos', medicos.length || null],
+    ]},
+    { header: 'Análisis', items: [
+      ['reportes','Reportes', null],
+    ]},
+    { header: 'Configuración', items: [
+      ['catalogo','Catálogo de pruebas', null],
+      ['laboratorio','Laboratorio', null],
+      ['usuarios','Usuarios', null],
+      ['bitacora','Bitácora', null],
+    ]},
+    { dividerBefore: true, items: [
+      ['mi-cuenta','Mi cuenta', null],
+    ]},
+  ].map(g => ({ ...g, items: g.items.filter(([id]) => puedeVer(id)) })).filter(g => g.items.length > 0);
+
   root.innerHTML = `
     <div class="nav">
       <div class="brand"><div class="name">LabSys</div><div class="sub">Captura y entrega de resultados</div></div>
-      ${nav.map(([id,label,count]) => `
-        <button class="navbtn ${view===id?'active':''}" onclick="labsysSetView('${id}')">
-          ${label}${count ? '<span class="count">'+count+'</span>' : ''}
-        </button>`).join('')}
+      ${gruposNav.map(g => `
+        ${g.dividerBefore ? '<div class="nav-divider"></div>' : ''}
+        ${g.header ? '<div class="nav-header">'+g.header+'</div>' : ''}
+        ${g.items.map(([id,label,count]) => `
+          <button class="navbtn ${view===id?'active':''}" onclick="labsysSetView('${id}')">
+            ${navIcon(id)}<span>${label}</span>${count ? '<span class="count">'+count+'</span>' : ''}
+          </button>`).join('')}
+      `).join('')}
     </div>
     <div class="main">${renderView()}</div>
     <div class="user-chip no-print">
