@@ -213,6 +213,9 @@ const SUPABASE_URL = 'https://poeowqukrbyctcgqlpfv.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_n5FvEZv3atdDtd4DfG1aKw_ZrvQzV30';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Pega aquí la URL de tu Google Apps Script (ver GUIA_PEDIDOS_INSUMOS.md) cuando la tengas.
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxEM7cJrk2qGvdBGgJ4SuC4WlkH8hswb8rO0RpUCeRyL9fVarUTdrk6hiyXnIwfLhR8/exec';
+
 
 // El catálogo (categorías, pruebas y valores de referencia) vive en Supabase — se carga con fetchTodo().
 
@@ -223,6 +226,7 @@ let ordenes = [];
 let medicos = [];
 let laboratorio = {};
 let bitacora = [];
+let insumos = [];
 let usuarios = [];
 let view = 'pacientes';
 let ctxOrdenId = null;
@@ -246,10 +250,12 @@ const PERMISOS = {
   informe: ['secretaria','quimico','contador','administrador'],
   reportes: ['secretaria','quimico','contador','administrador'],
   catalogo: ['administrador'],
+  'catalogo-insumos': ['administrador'],
+  pedidos: ['tecnico','administrador'],
   laboratorio: ['administrador'],
   usuarios: ['administrador'],
   bitacora: ['administrador'],
-  'mi-cuenta': ['secretaria','quimico','contador','administrador']
+  'mi-cuenta': ['secretaria','quimico','contador','tecnico','administrador']
 };
 function puedeVer(v) { return sesion && (sesion.rol === 'administrador' || !PERMISOS[v] || PERMISOS[v].includes(sesion.rol)); }
 function vistaInicial() {
@@ -257,6 +263,7 @@ function vistaInicial() {
   if (sesion.rol === 'administrador' || sesion.rol === 'secretaria') return 'pacientes';
   if (sesion.rol === 'quimico') return 'captura';
   if (sesion.rol === 'contador') return 'ordenes';
+  if (sesion.rol === 'tecnico') return 'pedidos';
   return 'pacientes';
 }
 
@@ -318,14 +325,16 @@ async function onAuthed(user) {
 }
 
 async function fetchTodo() {
-  const [cat, pru, lab, pac, med, ord] = await Promise.all([
+  const [cat, pru, lab, pac, med, ord, ins] = await Promise.all([
     supabase.from('categorias').select('*').order('orden'),
     supabase.from('pruebas').select('*, valores_referencia(*)').order('id'),
     supabase.from('laboratorio_config').select('*').eq('id', 1).single(),
     supabase.from('pacientes').select('*').order('id'),
     supabase.from('medicos').select('*').order('id'),
-    supabase.from('ordenes').select('*, orden_detalle(*)').order('id')
+    supabase.from('ordenes').select('*, orden_detalle(*)').order('id'),
+    supabase.from('insumos').select('*').order('nombre')
   ]);
+  insumos = ins.data || [];
   CATEGORIAS = cat.data || [];
   PRUEBAS = (pru.data || []).map(p => ({
     id: p.id, categoria_id: p.categoria_id, nombre: p.nombre, unidad: p.unidad, tipo: p.tipo, activo: p.activo,
@@ -386,6 +395,8 @@ const NAV_ICONS = {
   laboratorio: '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>',
   usuarios: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   bitacora: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+  pedidos: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  'catalogo-insumos': '<path d="M20 7h-3V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2H4a1 1 0 0 0-1 1v3a2 2 0 0 0 2 2h1v7a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-7h1a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1z"/><path d="M9 5h6v2H9z"/>',
   'mi-cuenta': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
 };
 function navIcon(id) {
@@ -533,12 +544,14 @@ function render() {
     { dividerBefore: true, items: [
       ['ordenes','Órdenes', ordenes.length || null],
       ['medicos','Médicos', medicos.length || null],
+      ['pedidos','Pedido de insumos', null],
     ]},
     { header: 'Análisis', items: [
       ['reportes','Reportes', null],
     ]},
     { header: 'Configuración', items: [
       ['catalogo','Catálogo de pruebas', null],
+      ['catalogo-insumos','Catálogo de insumos', null],
       ['laboratorio','Laboratorio', null],
       ['usuarios','Usuarios', null],
       ['bitacora','Bitácora', null],
@@ -625,6 +638,8 @@ function renderView() {
   if (view === 'laboratorio') return viewLaboratorio();
   if (view === 'usuarios') return viewUsuarios();
   if (view === 'bitacora') return viewBitacora();
+  if (view === 'pedidos') return viewPedidos();
+  if (view === 'catalogo-insumos') return viewCatalogoInsumos();
   if (view === 'mi-cuenta') return viewMiCuenta();
   return '';
 }
@@ -801,6 +816,7 @@ function viewUsuarios() {
                 <option value="secretaria" ${u.rol==='secretaria'?'selected':''}>Secretaria</option>
                 <option value="quimico" ${u.rol==='quimico'?'selected':''}>Química Bióloga</option>
                 <option value="contador" ${u.rol==='contador'?'selected':''}>Contador</option>
+                <option value="tecnico" ${u.rol==='tecnico'?'selected':''}>Técnico</option>
                 <option value="administrador" ${u.rol==='administrador'?'selected':''}>Administrador</option>
               </select>
             </td>
@@ -858,6 +874,81 @@ function viewBitacora() {
             </tr>`).join('')}
         </tbody></table>
       </details>`).join('')}
+  `;
+}
+
+function viewCatalogoInsumos() {
+  const categoriasExistentes = [...new Set(insumos.map(i => i.categoria).filter(Boolean))];
+  return `
+    <h1>Catálogo de insumos</h1>
+    <p class="lead">Lista que el técnico puede elegir al hacer un pedido, agrupada por categoría (${insumos.length} artículos).</p>
+    <div class="card">
+      <h2>Agregar insumo</h2>
+      <form id="form-insumo">
+        <div class="row">
+          <div style="flex:2"><label>Nombre</label><input type="text" name="nombre" required placeholder="Guantes de látex (talla M)"></div>
+          <div><label>Unidad</label><input type="text" name="unidad" placeholder="caja, litro, unidad..."></div>
+        </div>
+        <label>Categoría</label>
+        <input type="text" name="categoria" list="lista-categorias-insumo" placeholder="Ej. Flebotomía y Extracción">
+        <datalist id="lista-categorias-insumo">${categoriasExistentes.map(c => `<option value="${c}">`).join('')}</datalist>
+        <button class="btn" type="submit">Guardar insumo</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Listado (${insumos.length})</h2>
+      ${insumos.length === 0 ? '<div class="empty">Todavía no hay insumos en el catálogo.</div>' : `
+      <table><thead><tr><th>Nombre</th><th>Categoría</th><th>Unidad</th><th>Estado</th><th></th></tr></thead><tbody>
+        ${insumos.map(i => `
+          <tr>
+            <td>${i.nombre}</td>
+            <td class="refbox">${i.categoria || '—'}</td>
+            <td class="refbox">${i.unidad || '—'}</td>
+            <td><span class="pill ${i.activo===false?'pendiente':'validada'}">${i.activo===false?'inactivo':'activo'}</span></td>
+            <td><button class="btn small secondary" data-toggle-insumo="${i.id}">${i.activo===false?'Activar':'Desactivar'}</button></td>
+          </tr>`).join('')}
+      </tbody></table>`}
+    </div>
+  `;
+}
+
+function viewPedidos() {
+  const insumosActivos = insumos.filter(i => i.activo !== false);
+  const categorias = [...new Set(insumosActivos.map(i => i.categoria || 'Otros'))];
+  return `
+    <h1>Pedido de insumos</h1>
+    <p class="lead">Elige lo que necesitas de la lista, o agrégalo manualmente si no aparece.</p>
+    <div class="card">
+      <input type="text" id="buscador-insumos" placeholder="Buscar insumo..." style="margin-bottom:14px;">
+      <div id="lista-insumos">
+        ${insumosActivos.length === 0 ? '<div class="empty">Todavía no hay insumos en el catálogo. Pide al administrador que agregue algunos, o agrégalo manualmente abajo.</div>' : categorias.map(cat => `
+        <details class="catgroup">
+          <summary>
+            <span class="catname" onclick="event.preventDefault(); this.closest('details').open = !this.closest('details').open;">${cat}</span>
+            <span class="catcount">${insumosActivos.filter(i => (i.categoria || 'Otros') === cat).length} artículos</span>
+          </summary>
+          ${insumosActivos.filter(i => (i.categoria || 'Otros') === cat).map(i => `
+            <div class="testrow" data-busca="${i.nombre.toLowerCase()}">
+              <input type="checkbox" class="pedido-item" data-nombre="${i.nombre}" data-unidad="${i.unidad || ''}" id="ins-${i.id}">
+              <label for="ins-${i.id}" style="flex:1;">${i.nombre} ${i.unidad ? '<span class="refbox">('+i.unidad+')</span>' : ''}</label>
+              <input type="number" min="1" placeholder="Cant." class="pedido-cantidad" data-para="ins-${i.id}" style="width:80px;">
+            </div>`).join('')}
+        </details>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>¿No encontraste lo que buscabas?</h2>
+      <div id="manuales-lista"></div>
+      <button class="btn secondary small" id="btn-agregar-manual" type="button">+ Agregar insumo manualmente</button>
+    </div>
+
+    <div class="card">
+      <label>Nota (opcional)</label>
+      <textarea id="pedido-nota" rows="3" placeholder="Cualquier detalle adicional para el pedido..."></textarea>
+      <button class="btn" id="btn-enviar-pedido" style="margin-top:14px;">Enviar pedido</button>
+      <p class="refbox" id="pedido-estado" style="margin-top:10px;"></p>
+    </div>
   `;
 }
 
@@ -1715,6 +1806,102 @@ function attachHandlers() {
       hasta: document.getElementById('reporte-filtro-hasta') ? document.getElementById('reporte-filtro-hasta').value : ''
     };
     render();
+  });
+
+  const formInsumo = document.getElementById('form-insumo');
+  if (formInsumo) formInsumo.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(formInsumo);
+    const { data, error } = await supabase.from('insumos').insert({ nombre: fd.get('nombre'), unidad: fd.get('unidad') || null, categoria: fd.get('categoria') || null, activo: true }).select().single();
+    if (error) { toast('Error: ' + error.message); return; }
+    insumos.push(data); insumos.sort((a,b) => a.nombre.localeCompare(b.nombre));
+    toast('Insumo agregado');
+    logAccion('Agregó insumo al catálogo', data.nombre);
+    formInsumo.reset(); render();
+  });
+
+  document.querySelectorAll('[data-toggle-insumo]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const insumo = insumos.find(i => i.id === Number(btn.dataset.toggleInsumo));
+      const nuevo = insumo.activo === false ? true : false;
+      const { error } = await supabase.from('insumos').update({ activo: nuevo }).eq('id', insumo.id);
+      if (error) { toast('Error: ' + error.message); return; }
+      insumo.activo = nuevo;
+      logAccion(nuevo ? 'Activó insumo' : 'Desactivó insumo', insumo.nombre);
+      render();
+    });
+  });
+
+  const buscadorInsumos = document.getElementById('buscador-insumos');
+  if (buscadorInsumos) buscadorInsumos.addEventListener('input', () => {
+    const q = buscadorInsumos.value.trim().toLowerCase();
+    document.querySelectorAll('#lista-insumos .catgroup').forEach(det => {
+      const catNameEl = det.querySelector('.catname');
+      const catMatch = !!q && catNameEl && catNameEl.textContent.toLowerCase().includes(q);
+      let visibles = 0;
+      det.querySelectorAll('.testrow').forEach(row => {
+        const match = !q || catMatch || row.dataset.busca.includes(q);
+        row.style.display = match ? 'flex' : 'none';
+        if (match) visibles++;
+      });
+      det.style.display = (q && visibles === 0) ? 'none' : '';
+      if (q) det.open = visibles > 0;
+    });
+  });
+
+  const btnAgregarManual = document.getElementById('btn-agregar-manual');
+  if (btnAgregarManual) btnAgregarManual.addEventListener('click', () => {
+    const cont = document.getElementById('manuales-lista');
+    const fila = document.createElement('div');
+    fila.className = 'row';
+    fila.style.marginBottom = '8px';
+    fila.innerHTML = `
+      <div style="flex:2"><input type="text" class="manual-nombre" placeholder="Nombre del insumo"></div>
+      <div><input type="number" min="1" class="manual-cantidad" placeholder="Cant."></div>
+      <div style="flex:0;"><button type="button" class="btn small secondary" onclick="this.closest('.row').remove()">Quitar</button></div>
+    `;
+    cont.appendChild(fila);
+  });
+
+  const btnEnviarPedido = document.getElementById('btn-enviar-pedido');
+  if (btnEnviarPedido) btnEnviarPedido.addEventListener('click', async () => {
+    const items = [];
+    document.querySelectorAll('.pedido-item:checked').forEach(chk => {
+      const cantInput = document.querySelector(`.pedido-cantidad[data-para="${chk.id}"]`);
+      items.push({ nombre: chk.dataset.nombre, unidad: chk.dataset.unidad, cantidad: (cantInput && cantInput.value) || '1' });
+    });
+    document.querySelectorAll('.manual-nombre').forEach(inp => {
+      const nombre = inp.value.trim();
+      if (!nombre) return;
+      const cant = inp.closest('.row').querySelector('.manual-cantidad');
+      items.push({ nombre, unidad: '', cantidad: (cant && cant.value) || '1' });
+    });
+    if (items.length === 0) { toast('Selecciona o agrega al menos un insumo'); return; }
+    if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.indexOf('PEGA_AQUI') === 0) {
+      toast('Falta configurar el enlace de Google Sheets (avísale al administrador)');
+      return;
+    }
+    const estado = document.getElementById('pedido-estado');
+    estado.textContent = 'Enviando...';
+    const payload = {
+      tecnico: sesion.nombre,
+      nota: document.getElementById('pedido-nota').value.trim(),
+      items,
+      laboratorio: { nombre: laboratorio.nombre, direccion: laboratorio.direccion, telefono: laboratorio.telefono, correo: laboratorio.correo }
+    };
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+      estado.textContent = '✓ Pedido enviado correctamente.';
+      logAccion('Envió pedido de insumos', items.length + ' insumo(s)');
+      toast('Pedido enviado');
+      setView('pedidos');
+    } catch (err) {
+      estado.textContent = 'Error al enviar el pedido: ' + err.message;
+    }
   });
 
   const buscadorPacientes = document.getElementById('buscador-pacientes');
