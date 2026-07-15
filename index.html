@@ -118,6 +118,13 @@
 #labsys-root .informe-table td, #labsys-root .informe-table th { word-break: break-word; }
 #labsys-root .informe-table td:nth-child(2) { white-space: nowrap; }
 #labsys-root .informe-cat { margin-top: 18px; font-size: 13px; font-weight: 700; color: var(--primary-dark); text-transform: uppercase; letter-spacing: .03em; }
+#labsys-root .valida-table { table-layout: fixed; }
+#labsys-root .valida-table th:nth-child(1), #labsys-root .valida-table td:nth-child(1) { width: 30%; }
+#labsys-root .valida-table th:nth-child(2), #labsys-root .valida-table td:nth-child(2) { width: 17%; }
+#labsys-root .valida-table th:nth-child(3), #labsys-root .valida-table td:nth-child(3) { width: 13%; }
+#labsys-root .valida-table th:nth-child(4), #labsys-root .valida-table td:nth-child(4) { width: 20%; }
+#labsys-root .valida-table th:nth-child(5), #labsys-root .valida-table td:nth-child(5) { width: 20%; }
+#labsys-root .valida-table td, #labsys-root .valida-table th { word-break: break-word; }
 #labsys-root .capgroup { margin-bottom: 18px; }
 #labsys-root .capgroup h3 { font-size: 13px; font-weight: 600; color: var(--primary-dark); margin: 0 0 8px; padding-top: 10px; border-top: 1px solid var(--border); }
 #labsys-root .capgroup:first-child h3 { border-top: none; padding-top: 0; }
@@ -322,6 +329,7 @@ async function fetchTodo() {
   CATEGORIAS = cat.data || [];
   PRUEBAS = (pru.data || []).map(p => ({
     id: p.id, categoria_id: p.categoria_id, nombre: p.nombre, unidad: p.unidad, tipo: p.tipo, activo: p.activo,
+    opciones: p.opciones || null,
     ref: (p.valores_referencia || []).map(r => ({
       sexo: r.sexo, min: r.valor_min ?? undefined, max: r.valor_max ?? undefined,
       texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined
@@ -383,6 +391,23 @@ const NAV_ICONS = {
 function navIcon(id) {
   return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${NAV_ICONS[id] || ''}</svg>`;
 }
+
+function parseOpcionesValor(valor, opciones) {
+  if (!valor) return { seleccionadas: [], otro: '' };
+  const partes = valor.split(',').map(s => s.trim()).filter(Boolean);
+  const seleccionadas = partes.filter(x => opciones.includes(x));
+  const otro = partes.filter(x => !opciones.includes(x)).join(', ');
+  return { seleccionadas, otro };
+}
+function syncOpciones(pruebaId) {
+  const seleccionadas = Array.from(document.querySelectorAll(`.opcion-hallazgo[data-prueba="${pruebaId}"]:checked`)).map(c => c.value);
+  const otroInput = document.querySelector(`.opcion-otro[data-prueba="${pruebaId}"]`);
+  const otro = otroInput ? otroInput.value.trim() : '';
+  const partes = otro ? [...seleccionadas, otro] : seleccionadas;
+  const oculto = document.querySelector(`.cap-input[data-id="${pruebaId}"]`);
+  if (oculto) oculto.value = partes.join(', ');
+}
+window.syncOpciones = syncOpciones;
 
 function qrTag(data, cellSize) {
   try {
@@ -1037,9 +1062,28 @@ function viewCaptura() {
               const p = pruebaById(d.prueba_id);
               const ref = refFor(p, pac);
               const oorStyle = d.fuera_de_rango ? ' style="border-color:var(--danger);background:var(--danger-light);color:var(--danger);font-weight:600;"' : '';
-              const inputHtml = p.tipo === 'numerico'
-                ? `<input type="number" step="any" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_numerico ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`
-                : `<input type="text" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_texto ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`;
+              let inputHtml;
+              if (p.opciones && p.opciones.length) {
+                const { seleccionadas, otro } = parseOpcionesValor(d.valor_texto, p.opciones);
+                const disabled = d.estado === 'validada' ? 'disabled' : '';
+                inputHtml = `
+                  <input type="text" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_texto ?? ''}" style="display:none;">
+                  <details class="catgroup" style="max-width:320px;">
+                    <summary><span class="catname">${seleccionadas.length || otro ? (seleccionadas.concat(otro?[otro]:[]).join(', ')) : 'Seleccionar hallazgos'}</span></summary>
+                    ${p.opciones.map(op => `
+                      <div class="testrow">
+                        <input type="checkbox" class="opcion-hallazgo" data-prueba="${d.prueba_id}" value="${op}" ${seleccionadas.includes(op)?'checked':''} ${disabled} onchange="syncOpciones(${d.prueba_id})">
+                        <label>${op}</label>
+                      </div>`).join('')}
+                    <div class="testrow">
+                      <input type="text" class="opcion-otro" data-prueba="${d.prueba_id}" placeholder="Otro (no está en la lista)" value="${otro}" ${disabled} oninput="syncOpciones(${d.prueba_id})" style="width:100%;">
+                    </div>
+                  </details>`;
+              } else {
+                inputHtml = p.tipo === 'numerico'
+                  ? `<input type="number" step="any" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_numerico ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`
+                  : `<input type="text" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_texto ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`;
+              }
               return `<tr>
                 <td>${p.nombre}</td>
                 <td>${inputHtml} ${p.unidad ? '<span class="refbox">'+p.unidad+'</span>' : ''}
@@ -1133,13 +1177,16 @@ function viewValidacion() {
       ${grupos.length === 0 ? '<div class="empty">No hay resultados capturados en esta orden.</div>' : grupos.map(g => `
         <div class="capgroup">
           <h3>${g.cat.nombre}</h3>
-          <table><thead><tr><th>Prueba</th><th>Resultado</th><th>Capturado por</th></tr></thead><tbody>
+          <table class="valida-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th><th>Capturado por</th></tr></thead><tbody>
             ${g.items.map(d => {
               const p = pruebaById(d.prueba_id);
+              const ref = refFor(p, pac);
               const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
               return `<tr>
                 <td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td>
-                <td class="${d.fuera_de_rango ? 'oor' : ''}">${val} ${p.unidad || ''} ${d.fuera_de_rango ? '<span class="oor">⚠️ fuera de rango</span>' : ''}</td>
+                <td class="${d.fuera_de_rango ? 'oor' : ''}">${val}${d.fuera_de_rango ? ' <span class="oor">⚠️ fuera de rango</span>' : ''}</td>
+                <td class="refbox">${p.unidad || '—'}</td>
+                <td class="refbox">${refTexto(ref)}</td>
                 <td>${d.capturado_por || '—'}</td>
               </tr>`;
             }).join('')}
