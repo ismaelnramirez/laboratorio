@@ -1230,13 +1230,15 @@ function viewInforme() {
       <div class="card">
         <input type="text" id="buscador-informe" placeholder="Buscar por paciente o folio..." style="margin-bottom:14px;">
         ${validas.length === 0 ? '<div class="empty">Todavía no hay órdenes validadas.</div>' : `
-        <table id="tabla-informe"><thead><tr><th>Folio</th><th>Paciente</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>
+        <table id="tabla-informe"><thead><tr><th>Folio</th><th>Paciente</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody>
         ${validas.slice().reverse().map(o => {
           const pac = pacienteById(o.paciente_id);
+          const puedeAnular = o.estado !== 'anulada' && (sesion.rol === 'quimico' || sesion.rol === 'administrador');
           return `<tr class="clickrow" onclick="labsysSetView('informe','${o.id}')" data-busca="${(pac.nombres+' '+pac.apellidos+' #'+String(o.id).padStart(4,'0')).toLowerCase()}">
             <td>#${String(o.id).padStart(4,'0')}</td><td>${pac.nombres} ${pac.apellidos}</td>
             <td class="refbox">${new Date(o.fecha).toLocaleDateString()}</td>
-            <td><span class="pill ${o.estado}">${o.estado}</span></td></tr>`;
+            <td><span class="pill ${o.estado}">${o.estado}</span></td>
+            <td>${puedeAnular ? `<button class="btn small secondary" data-anular-orden="${o.id}" onclick="event.stopPropagation()">Anular</button>` : ''}</td></tr>`;
         }).join('')}
         </tbody></table>`}
       </div>
