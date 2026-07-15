@@ -106,7 +106,7 @@
 #labsys-root .refbox { font-size: 12px; color: var(--muted); margin-top: 2px; }
 #labsys-root .oor { color: var(--danger); font-weight: 600; }
 #labsys-root .backlink { font-size: 12px; color: var(--primary); cursor: pointer; margin-bottom: 14px; display: inline-block; }
-#labsys-root .toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary-dark); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 50; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary-dark, #085041); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 999; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
 #labsys-root .banner { background: var(--amber-light); color: var(--amber); border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 18px; }
 #labsys-root .informe-header { display: flex; justify-content: space-between; border-bottom: 2px solid var(--primary-dark); padding-bottom: 12px; margin-bottom: 16px; }
 #labsys-root .informe-table th { background: var(--bg); }
@@ -449,8 +449,8 @@ function qrTag(data, cellSize) {
 function toast(msg) {
   const t = document.createElement('div');
   t.className = 'toast'; t.textContent = msg;
-  document.getElementById('labsys-root').appendChild(t);
-  setTimeout(() => t.remove(), 2200);
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
 }
 
 function edad(fnac) {
@@ -916,10 +916,23 @@ function viewPedidos() {
   const insumosActivos = insumos.filter(i => i.activo !== false);
   const categorias = [...new Set(insumosActivos.map(i => i.categoria || 'Otros'))];
   return `
-    <h1>Pedido de insumos</h1>
+    <div class="informe-header" style="margin-bottom:16px;">
+      <div>
+        ${laboratorio.logo ? '<img src="'+laboratorio.logo+'" alt="Logo" style="max-height:70px;max-width:120px;display:block;margin-bottom:8px;">' : ''}
+        <strong>${laboratorio.nombre || 'LabSys'}</strong>
+        ${laboratorio.direccion ? '<div class="refbox">'+laboratorio.direccion+'</div>' : ''}
+        ${(laboratorio.telefono || laboratorio.correo) ? '<div class="refbox">'+[laboratorio.telefono, laboratorio.correo].filter(Boolean).join(' · ')+'</div>' : ''}
+      </div>
+      <div style="text-align:right">
+        <div class="refbox">Solicitado por</div>
+        <div class="refbox" style="font-weight:600;">${sesion.nombre}</div>
+      </div>
+    </div>
+    <h1>Orden de compra</h1>
     <p class="lead">Elige lo que necesitas de la lista, o agrégalo manualmente si no aparece.</p>
     <div class="card">
-      <input type="text" id="buscador-insumos" placeholder="Buscar insumo..." style="margin-bottom:14px;">
+      <input type="text" id="buscador-insumos" placeholder="Buscar insumo, categoría o presentación..." style="margin-bottom:6px;">
+      <p class="refbox" id="contador-insumos" style="margin:0 0 12px;">${insumosActivos.length} insumos disponibles</p>
       <div id="lista-insumos">
         ${insumosActivos.length === 0 ? '<div class="empty">Todavía no hay insumos en el catálogo. Pide al administrador que agregue algunos, o agrégalo manualmente abajo.</div>' : categorias.map(cat => `
         <details class="catgroup">
@@ -928,7 +941,7 @@ function viewPedidos() {
             <span class="catcount">${insumosActivos.filter(i => (i.categoria || 'Otros') === cat).length} artículos</span>
           </summary>
           ${insumosActivos.filter(i => (i.categoria || 'Otros') === cat).map(i => `
-            <div class="testrow" data-busca="${i.nombre.toLowerCase()}">
+            <div class="testrow" data-busca="${(i.nombre + ' ' + (i.unidad||'') + ' ' + (i.categoria||'')).toLowerCase()}">
               <input type="checkbox" class="pedido-item" data-nombre="${i.nombre}" data-unidad="${i.unidad || ''}" id="ins-${i.id}">
               <label for="ins-${i.id}" style="flex:1;">${i.nombre} ${i.unidad ? '<span class="refbox">('+i.unidad+')</span>' : ''}</label>
               <input type="number" min="1" placeholder="Cant." class="pedido-cantidad" data-para="ins-${i.id}" style="width:80px;">
@@ -946,8 +959,8 @@ function viewPedidos() {
     <div class="card">
       <label>Nota (opcional)</label>
       <textarea id="pedido-nota" rows="3" placeholder="Cualquier detalle adicional para el pedido..."></textarea>
-      <button class="btn" id="btn-enviar-pedido" style="margin-top:14px;">Enviar pedido</button>
-      <p class="refbox" id="pedido-estado" style="margin-top:10px;"></p>
+      <button class="btn" id="btn-enviar-pedido" style="margin-top:14px;">📦 Enviar pedido</button>
+      <p id="pedido-estado" style="margin-top:10px;font-weight:600;"></p>
     </div>
   `;
 }
@@ -1835,6 +1848,7 @@ function attachHandlers() {
   const buscadorInsumos = document.getElementById('buscador-insumos');
   if (buscadorInsumos) buscadorInsumos.addEventListener('input', () => {
     const q = buscadorInsumos.value.trim().toLowerCase();
+    let totalVisible = 0;
     document.querySelectorAll('#lista-insumos .catgroup').forEach(det => {
       const catNameEl = det.querySelector('.catname');
       const catMatch = !!q && catNameEl && catNameEl.textContent.toLowerCase().includes(q);
@@ -1846,7 +1860,10 @@ function attachHandlers() {
       });
       det.style.display = (q && visibles === 0) ? 'none' : '';
       if (q) det.open = visibles > 0;
+      totalVisible += visibles;
     });
+    const contador = document.getElementById('contador-insumos');
+    if (contador) contador.textContent = q ? `${totalVisible} resultado(s) para "${buscadorInsumos.value.trim()}"` : `${totalVisible} insumos disponibles`;
   });
 
   const btnAgregarManual = document.getElementById('btn-agregar-manual');
@@ -1882,7 +1899,9 @@ function attachHandlers() {
       return;
     }
     const estado = document.getElementById('pedido-estado');
+    estado.style.color = 'var(--text)';
     estado.textContent = 'Enviando...';
+    btnEnviarPedido.disabled = true;
     const payload = {
       tecnico: sesion.nombre,
       nota: document.getElementById('pedido-nota').value.trim(),
@@ -1895,12 +1914,20 @@ function attachHandlers() {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
-      estado.textContent = '✓ Pedido enviado correctamente.';
+      estado.style.color = 'var(--primary-dark)';
+      estado.textContent = '✓ Pedido enviado correctamente — ' + new Date().toLocaleTimeString();
+      toast('📦 Pedido enviado correctamente');
       logAccion('Envió pedido de insumos', items.length + ' insumo(s)');
-      toast('Pedido enviado');
-      setView('pedidos');
+      // Limpiar el formulario sin recargar toda la pantalla, para no borrar el mensaje de arriba
+      document.querySelectorAll('.pedido-item:checked').forEach(chk => chk.checked = false);
+      document.querySelectorAll('.pedido-cantidad').forEach(inp => inp.value = '');
+      document.getElementById('pedido-nota').value = '';
+      document.getElementById('manuales-lista').innerHTML = '';
     } catch (err) {
+      estado.style.color = 'var(--danger)';
       estado.textContent = 'Error al enviar el pedido: ' + err.message;
+    } finally {
+      btnEnviarPedido.disabled = false;
     }
   });
 
