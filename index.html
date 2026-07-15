@@ -232,7 +232,6 @@ const PERMISOS = {
   medicos: ['secretaria','administrador'],
   'nueva-orden': ['secretaria','administrador'],
   ordenes: ['secretaria','quimico','contador','administrador'],
-  buscar: ['secretaria','quimico','contador','administrador'],
   captura: ['quimico','administrador'],
   'captura-pdf': ['quimico','administrador'],
   validacion: ['quimico','administrador'],
@@ -345,7 +344,7 @@ async function fetchTodo() {
   bitacora = [];
   usuarios = [];
   if (sesion.rol === 'administrador') {
-    const { data: bit } = await supabase.from('bitacora').select('*').order('fecha', { ascending: false }).limit(200);
+    const { data: bit } = await supabase.from('bitacora').select('*').order('fecha', { ascending: false }).limit(500);
     bitacora = (bit || []).slice().reverse();
     const { data: perf } = await supabase.from('perfiles').select('*').order('creado_en');
     usuarios = perf || [];
@@ -490,7 +489,6 @@ function render() {
     ]},
     { dividerBefore: true, items: [
       ['ordenes','Órdenes', ordenes.length || null],
-      ['buscar','Buscar', null],
       ['medicos','Médicos', medicos.length || null],
     ]},
     { header: 'Análisis', items: [
@@ -575,7 +573,6 @@ function renderView() {
   if (view === 'medicos') return viewMedicos();
   if (view === 'nueva-orden') return viewNuevaOrden();
   if (view === 'ordenes') return viewOrdenes();
-  if (view === 'buscar') return viewBuscar();
   if (view === 'captura') return viewCaptura();
   if (view === 'captura-pdf') return viewCapturaPDF();
   if (view === 'validacion') return viewValidacion();
@@ -620,10 +617,11 @@ function viewPacientes() {
     </div>
     <div class="card">
       <h2>Listado (${pacientes.length})</h2>
+      <input type="text" id="buscador-pacientes" placeholder="Buscar por nombre, teléfono o dirección..." style="margin-bottom:14px;">
       ${pacientes.length === 0 ? '<div class="empty">Todavía no hay pacientes registrados.</div>' : `
-      <table><thead><tr><th>Nombre</th><th>Edad</th><th>Sexo</th><th>Dirección</th><th>Teléfono</th><th></th></tr></thead><tbody>
+      <table id="tabla-pacientes"><thead><tr><th>Nombre</th><th>Edad</th><th>Sexo</th><th>Dirección</th><th>Teléfono</th><th></th></tr></thead><tbody>
         ${pacientes.slice().reverse().map(p => `
-          <tr>
+          <tr data-busca="${(p.nombres+' '+p.apellidos+' '+(p.telefono||'')+' '+(p.direccion||'')).toLowerCase()}">
             <td class="clickrow" onclick="labsysSetView('ficha-paciente','${p.id}')">${p.nombres} ${p.apellidos}</td>
             <td>${edad(p.fnac)}</td>
             <td>${p.sexo === 'M' ? 'M' : 'F'}</td>
@@ -789,23 +787,34 @@ function viewMiCuenta() {
 }
 
 function viewBitacora() {
-  const entradas = bitacora.slice().reverse().slice(0, 200);
+  const entradas = bitacora.slice().reverse().slice(0, 500);
+  const grupos = [];
+  entradas.forEach(e => {
+    const dia = new Date(e.fecha).toLocaleDateString('es-GT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    let g = grupos.find(x => x.dia === dia);
+    if (!g) { g = { dia, items: [] }; grupos.push(g); }
+    g.items.push(e);
+  });
   return `
     <h1>Bitácora de cambios</h1>
-    <p class="lead">Registro de acciones importantes realizadas en el sistema (últimas ${entradas.length}).</p>
-    <div class="card">
-      ${entradas.length === 0 ? '<div class="empty">Todavía no hay actividad registrada.</div>' : `
-      <table><thead><tr><th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>
-        ${entradas.map(e => `
-          <tr>
-            <td class="refbox">${new Date(e.fecha).toLocaleString()}</td>
-            <td>${e.usuario}</td>
-            <td style="text-transform:capitalize;" class="refbox">${e.rol}</td>
-            <td>${e.accion}</td>
-            <td class="refbox">${e.detalle || ''}</td>
-          </tr>`).join('')}
-      </tbody></table>`}
-    </div>
+    <p class="lead">Registro de acciones importantes realizadas en el sistema (últimas ${entradas.length}), agrupadas por día.</p>
+    ${grupos.length === 0 ? '<div class="card"><div class="empty">Todavía no hay actividad registrada.</div></div>' : grupos.map((g, i) => `
+      <details class="catgroup" ${i === 0 ? 'open' : ''}>
+        <summary>
+          <span class="catname" style="text-transform:capitalize;" onclick="event.preventDefault(); this.closest('details').open = !this.closest('details').open;">${g.dia}</span>
+          <span class="catcount">${g.items.length} acciones</span>
+        </summary>
+        <table style="margin:0 14px 10px;width:calc(100% - 28px);"><thead><tr><th>Hora</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Detalle</th></tr></thead><tbody>
+          ${g.items.map(e => `
+            <tr>
+              <td class="refbox">${new Date(e.fecha).toLocaleTimeString()}</td>
+              <td>${e.usuario}</td>
+              <td style="text-transform:capitalize;" class="refbox">${e.rol}</td>
+              <td>${e.accion}</td>
+              <td class="refbox">${e.detalle || ''}</td>
+            </tr>`).join('')}
+        </tbody></table>
+      </details>`).join('')}
   `;
 }
 
@@ -959,53 +968,6 @@ function viewNuevaOrden() {
   `;
 }
 
-function viewBuscar() {
-  return `
-    <h1>Buscar</h1>
-    <p class="lead">Busca por nombre de paciente, teléfono o folio de orden.</p>
-    <div class="card">
-      <input type="text" id="global-search-input" placeholder="Escribe para buscar...">
-      <div id="global-search-results" style="margin-top:16px;">${renderBusquedaResultados('')}</div>
-    </div>
-  `;
-}
-
-function renderBusquedaResultados(q) {
-  q = q.trim().toLowerCase();
-  if (!q) return '<div class="empty">Escribe para empezar a buscar.</div>';
-  const pacMatches = pacientes.filter(p =>
-    (p.nombres+' '+p.apellidos).toLowerCase().includes(q) ||
-    (p.telefono||'').toLowerCase().includes(q)
-  ).slice(0, 15);
-  const ordMatches = ordenes.filter(o => {
-    const pac = pacienteById(o.paciente_id);
-    const folio = '#' + String(o.id).padStart(4,'0');
-    return folio.toLowerCase().includes(q) || String(o.id) === q ||
-      (pac && (pac.nombres+' '+pac.apellidos).toLowerCase().includes(q));
-  }).slice(0, 15);
-
-  let html = '<h3 style="font-size:13px;margin:0 0 8px;">Pacientes (' + pacMatches.length + ')</h3>';
-  html += pacMatches.length === 0 ? '<div class="empty">Sin coincidencias.</div>' : `
-    <table><tbody>
-    ${pacMatches.map(p => `<tr class="clickrow" onclick="labsysSetView('ficha-paciente','${p.id}')">
-      <td>${p.nombres} ${p.apellidos}</td><td class="refbox">${edad(p.fnac)} años</td>
-    </tr>`).join('')}
-    </tbody></table>`;
-
-  html += '<h3 style="font-size:13px;margin:20px 0 8px;">Órdenes (' + ordMatches.length + ')</h3>';
-  html += ordMatches.length === 0 ? '<div class="empty">Sin coincidencias.</div>' : `
-    <table><tbody>
-    ${ordMatches.map(o => {
-      const pac = pacienteById(o.paciente_id);
-      const destino = (o.estado === 'validada' || o.estado === 'entregada') ? 'informe' : 'captura';
-      return `<tr class="clickrow" onclick="labsysSetView('${destino}','${o.id}')">
-      <td>#${String(o.id).padStart(4,'0')}</td><td>${pac ? pac.nombres+' '+pac.apellidos : '—'}</td><td><span class="pill ${o.estado}">${o.estado.replace('_',' ')}</span></td>
-    </tr>`;
-    }).join('')}
-    </tbody></table>`;
-  return html;
-}
-
 function viewOrdenes() {
   return `
     <h1>Órdenes</h1>
@@ -1016,7 +978,7 @@ function viewOrdenes() {
         ${ordenes.slice().reverse().map(o => {
           const pac = pacienteById(o.paciente_id);
           const clic = o.estado !== 'anulada';
-          const puedeAnular = o.estado !== 'anulada';
+          const puedeAnular = o.estado !== 'anulada' && (sesion.rol === 'quimico' || sesion.rol === 'administrador');
           return `<tr ${clic ? `class="clickrow" onclick="labsysSetView('captura','${o.id}')"` : ''}>
             <td>#${String(o.id).padStart(4,'0')}</td>
             <td>${pac ? pac.nombres+' '+pac.apellidos : '—'}</td>
@@ -1301,7 +1263,7 @@ function svgBarrasV(items, labelFn, valueFn) {
   if (items.length === 0) return '';
   const max = Math.max(...items.map(valueFn), 1);
   const w = 40, gap = 10, h = 120;
-  const totalW = items.length * (w + gap);
+  const totalW = Math.max(items.length * (w + gap), 200);
   const barras = items.map((it, i) => {
     const val = valueFn(it);
     const bh = Math.max((val / max) * h, 2);
@@ -1312,7 +1274,34 @@ function svgBarrasV(items, labelFn, valueFn) {
       <text x="${x + w/2}" y="${h + 14}" font-size="9" fill="var(--muted)" text-anchor="middle">${labelFn(it)}</text>
     `;
   }).join('');
-  return `<svg viewBox="0 0 ${totalW} ${h+26}" width="100%" style="max-width:520px;">${barras}</svg>`;
+  return `<svg viewBox="0 0 ${totalW} ${h+26}" width="100%" height="150" preserveAspectRatio="xMidYMid meet" style="max-width:520px;">${barras}</svg>`;
+}
+
+function svgLineChart(items, labelFn, valueFn) {
+  if (items.length === 0) return '';
+  const max = Math.max(...items.map(valueFn), 1);
+  const w = 60, h = 110, padTop = 18, padBottom = 22;
+  const totalW = Math.max(items.length * w, 220);
+  const points = items.map((it, i) => {
+    const val = valueFn(it);
+    const x = i * w + w / 2;
+    const y = padTop + (h - (max ? (val / max) * h : 0));
+    return { x, y, val, label: labelFn(it) };
+  });
+  const path = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x + ',' + p.y).join(' ');
+  const area = points.length > 1
+    ? path + ` L ${points[points.length-1].x},${h+padTop} L ${points[0].x},${h+padTop} Z`
+    : '';
+  const marcas = points.map(p => `
+    <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--primary)"></circle>
+    <text x="${p.x}" y="${p.y-10}" font-size="10" fill="var(--muted)" text-anchor="middle">${p.val}</text>
+    <text x="${p.x}" y="${h+padTop+16}" font-size="9" fill="var(--muted)" text-anchor="middle">${p.label}</text>
+  `).join('');
+  return `<svg viewBox="0 0 ${totalW} ${h+padTop+padBottom}" width="100%" height="150" preserveAspectRatio="xMidYMid meet" style="max-width:520px;">
+    ${area ? '<path d="'+area+'" fill="var(--primary-light)" opacity="0.6"></path>' : ''}
+    <path d="${path}" fill="none" stroke="var(--primary)" stroke-width="2"></path>
+    ${marcas}
+  </svg>`;
 }
 
 function viewReportes() {
@@ -1389,8 +1378,21 @@ function viewReportes() {
   const volumenMensual = Object.entries(conteoMes).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
 
   return `
+    <div class="informe-header" style="margin-bottom:16px;">
+      <div>
+        ${laboratorio.logo ? '<img src="'+laboratorio.logo+'" alt="Logo" style="max-height:80px;max-width:130px;display:block;margin-bottom:8px;">' : ''}
+        <strong>${laboratorio.nombre || 'LabSys'}</strong>
+        ${laboratorio.direccion ? '<div class="refbox">'+laboratorio.direccion+'</div>' : ''}
+        ${(laboratorio.telefono || laboratorio.correo) ? '<div class="refbox">'+[laboratorio.telefono, laboratorio.correo].filter(Boolean).join(' · ')+'</div>' : ''}
+      </div>
+      <div style="text-align:right">
+        <div class="refbox">Reporte generado</div>
+        <div class="refbox">${new Date().toLocaleString()}</div>
+      </div>
+    </div>
     <h1>Reportes</h1>
     <p class="lead">Calculados en el momento a partir de los datos actuales del sistema.</p>
+    <button class="btn secondary no-print" onclick="window.print()" style="margin-bottom:16px;">Descargar / Imprimir PDF</button>
 
     <div class="card">
       <h2>1. Resumen general</h2>
@@ -1474,7 +1476,7 @@ function viewReportes() {
     <div class="card">
       <h2>9. Volumen de órdenes por mes</h2>
       ${volumenMensual.length === 0 ? '<div class="empty">Todavía no hay órdenes.</div>' : `
-      <div style="margin-bottom:16px;overflow-x:auto;">${svgBarrasV(volumenMensual, x => x[0].slice(2), x => x[1])}</div>
+      <div style="margin-bottom:16px;overflow-x:auto;">${svgLineChart(volumenMensual, x => x[0].slice(2), x => x[1])}</div>
       <table><thead><tr><th>Mes</th><th style="text-align:right;">Órdenes creadas</th></tr></thead><tbody>
         ${volumenMensual.map(([mes, n]) => `<tr><td>${mes}</td><td style="text-align:right;">${n}</td></tr>`).join('')}
       </tbody></table>`}
@@ -1571,12 +1573,13 @@ function attachHandlers() {
     });
   });
 
-  const searchInput = document.getElementById('global-search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      document.getElementById('global-search-results').innerHTML = renderBusquedaResultados(searchInput.value);
+  const buscadorPacientes = document.getElementById('buscador-pacientes');
+  if (buscadorPacientes) buscadorPacientes.addEventListener('input', () => {
+    const q = buscadorPacientes.value.trim().toLowerCase();
+    document.querySelectorAll('#tabla-pacientes tbody tr').forEach(row => {
+      row.style.display = (!q || row.dataset.busca.includes(q)) ? '' : 'none';
     });
-  }
+  });
 
   const buscador = document.getElementById('buscador-pruebas');
   if (buscador) buscador.addEventListener('input', () => {
