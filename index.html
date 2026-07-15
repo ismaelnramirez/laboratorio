@@ -244,8 +244,8 @@ const PERMISOS = {
   medicos: ['secretaria','administrador'],
   'nueva-orden': ['secretaria','administrador'],
   ordenes: ['secretaria','quimico','contador','administrador'],
-  captura: ['quimico','administrador'],
-  'captura-pdf': ['quimico','administrador'],
+  captura: ['secretaria','administrador'],
+  'captura-pdf': ['secretaria','administrador'],
   validacion: ['quimico','administrador'],
   informe: ['secretaria','quimico','contador','administrador'],
   reportes: ['secretaria','quimico','contador','administrador'],
@@ -261,7 +261,7 @@ function puedeVer(v) { return sesion && (sesion.rol === 'administrador' || !PERM
 function vistaInicial() {
   if (!sesion) return 'pacientes';
   if (sesion.rol === 'administrador' || sesion.rol === 'secretaria') return 'pacientes';
-  if (sesion.rol === 'quimico') return 'captura';
+  if (sesion.rol === 'quimico') return 'validacion';
   if (sesion.rol === 'contador') return 'ordenes';
   if (sesion.rol === 'tecnico') return 'pedidos';
   return 'pacientes';
