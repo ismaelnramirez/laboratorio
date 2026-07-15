@@ -393,17 +393,34 @@ function navIcon(id) {
 }
 
 function parseOpcionesValor(valor, opciones) {
-  if (!valor) return { seleccionadas: [], otro: '' };
-  const lineas = valor.split('\n').map(s => s.trim()).filter(Boolean);
-  const seleccionadas = lineas.filter(x => opciones.includes(x));
-  const otro = lineas.filter(x => !opciones.includes(x)).join(', ');
+  const seleccionadas = {};
+  let otro = '';
+  if (valor) {
+    const lineas = valor.split('\n').map(s => s.trim()).filter(Boolean);
+    const otroLineas = [];
+    lineas.forEach(linea => {
+      const idx = linea.indexOf(' — ');
+      const nombre = idx >= 0 ? linea.slice(0, idx).trim() : linea;
+      const nota = idx >= 0 ? linea.slice(idx + 3).trim() : '';
+      if (opciones.includes(nombre)) seleccionadas[nombre] = nota;
+      else otroLineas.push(linea);
+    });
+    otro = otroLineas.join(', ');
+  }
   return { seleccionadas, otro };
 }
 function syncOpciones(pruebaId) {
-  const seleccionadas = Array.from(document.querySelectorAll(`.opcion-hallazgo[data-prueba="${pruebaId}"]:checked`)).map(c => c.value);
+  const lineas = [];
+  document.querySelectorAll(`.opcion-item[data-prueba="${pruebaId}"]`).forEach(item => {
+    const chk = item.querySelector('.opcion-hallazgo');
+    if (!chk || !chk.checked) return;
+    const nota = item.querySelector('.opcion-nota');
+    const notaVal = nota ? nota.value.trim() : '';
+    lineas.push(notaVal ? `${chk.value} — ${notaVal}` : chk.value);
+  });
   const otroInput = document.querySelector(`.opcion-otro[data-prueba="${pruebaId}"]`);
   const otro = otroInput ? otroInput.value.trim() : '';
-  const lineas = otro ? [...seleccionadas, otro] : seleccionadas;
+  if (otro) lineas.push(otro);
   const oculto = document.querySelector(`.cap-input[data-id="${pruebaId}"]`);
   if (oculto) oculto.value = lineas.join('\n');
 }
@@ -1067,14 +1084,19 @@ function viewCaptura() {
               if (p.opciones && p.opciones.length) {
                 const { seleccionadas, otro } = parseOpcionesValor(d.valor_texto, p.opciones);
                 const disabled = d.estado === 'validada' ? 'disabled' : '';
+                const nSel = Object.keys(seleccionadas).length;
                 inputHtml = `
                   <input type="text" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_texto ?? ''}" style="display:none;">
-                  <details class="catgroup" style="max-width:340px;">
-                    <summary><span class="catname">${seleccionadas.length || otro ? seleccionadas.length + (otro?' + otro':'') + ' seleccionado(s)' : 'Seleccionar hallazgos'}</span></summary>
+                  <datalist id="lista-cantidades"><option value="Escasa cantidad"><option value="Regular cantidad"><option value="Abundante cantidad"></datalist>
+                  <details class="catgroup" style="max-width:420px;">
+                    <summary><span class="catname">${nSel || otro ? nSel + (otro?' + otro':'') + ' seleccionado(s)' : 'Seleccionar hallazgos'}</span></summary>
                     ${p.opciones.map(op => `
-                      <div class="testrow">
-                        <input type="checkbox" class="opcion-hallazgo" data-prueba="${d.prueba_id}" value="${op}" ${seleccionadas.includes(op)?'checked':''} ${disabled} onchange="syncOpciones(${d.prueba_id})">
-                        <label>${op}</label>
+                      <div class="testrow opcion-item" data-prueba="${d.prueba_id}" style="align-items:flex-start;">
+                        <input type="checkbox" class="opcion-hallazgo" value="${op}" ${seleccionadas[op]!==undefined?'checked':''} ${disabled} onchange="syncOpciones(${d.prueba_id})">
+                        <div style="flex:1;">
+                          <label>${op}</label>
+                          <input type="text" class="opcion-nota" list="lista-cantidades" placeholder="Cantidad (opcional)" value="${seleccionadas[op] || ''}" ${disabled} oninput="syncOpciones(${d.prueba_id})" style="margin-top:4px;font-size:12px;padding:4px 8px;width:100%;">
+                        </div>
                       </div>`).join('')}
                     <div class="testrow">
                       <input type="text" class="opcion-otro" data-prueba="${d.prueba_id}" placeholder="Otro (no está en la lista)" value="${otro}" ${disabled} oninput="syncOpciones(${d.prueba_id})" style="width:100%;">
