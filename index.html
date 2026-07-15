@@ -222,6 +222,7 @@ let ctxOrdenId = null;
 let ctxPruebaId = null;
 let ctxPacienteEdit = null;
 let ctxMedicoEdit = null;
+let reporteFiltro = { modo: 'general', anio: '', mes: '', desde: '', hasta: '' };
 let sesion = null;
 let loginError = '';
 let mostrarSignup = false;
@@ -1219,6 +1220,7 @@ function viewInforme() {
       </div>
       <div class="no-print" style="margin-top:14px;">
         <button class="btn" onclick="window.print()">Imprimir / PDF</button>
+        ${orden.estado !== 'entregada' ? '<p class="refbox oor" style="margin-top:8px;">⚠️ Todavía no se ha registrado la entrega de esta orden.</p>' : ''}
       </div>
       ${orden.estado === 'entregada' ? `
         <p class="refbox" style="margin-top:14px;">Entregado por <strong>${orden.medio_texto || ''}</strong>${orden.entregado_por ? ' · '+orden.entregado_por : ''}${orden.fecha_entrega ? ' · '+new Date(orden.fecha_entrega).toLocaleString() : ''}${orden.receptor ? ' · Recibió: '+orden.receptor : ''}</p>
@@ -1304,20 +1306,39 @@ function svgLineChart(items, labelFn, valueFn) {
   </svg>`;
 }
 
+function ordenesFiltroReporte() {
+  const f = reporteFiltro;
+  if (f.modo === 'general') return ordenes;
+  return ordenes.filter(o => {
+    const fecha = new Date(o.fecha);
+    if (f.modo === 'anio') return String(fecha.getFullYear()) === String(f.anio);
+    if (f.modo === 'mes') return o.fecha.slice(0, 7) === f.mes;
+    if (f.modo === 'rango') {
+      if (f.desde && o.fecha.slice(0, 10) < f.desde) return false;
+      if (f.hasta && o.fecha.slice(0, 10) > f.hasta) return false;
+      return true;
+    }
+    return true;
+  });
+}
+
 function viewReportes() {
-  const todosDetalle = ordenes.flatMap(o => o.detalle.map(d => ({ ...d, orden_id: o.id, paciente_id: o.paciente_id, fecha_orden: o.fecha })));
+  const ordenesR = ordenesFiltroReporte();
+  const aniosDisponibles = [...new Set(ordenes.map(o => new Date(o.fecha).getFullYear()))].sort((a,b) => b-a);
+  const mesesDisponibles = [...new Set(ordenes.map(o => o.fecha.slice(0,7)))].sort().reverse();
+  const todosDetalle = ordenesR.flatMap(o => o.detalle.map(d => ({ ...d, orden_id: o.id, paciente_id: o.paciente_id, fecha_orden: o.fecha })));
   const conResultado = todosDetalle.filter(d => d.estado === 'capturada' || d.estado === 'validada');
 
   // 1. Resumen general
   const totalFueraRango = todosDetalle.filter(d => d.fuera_de_rango).length;
   const resumen = [
     ['Pacientes registrados', pacientes.length],
-    ['Órdenes totales', ordenes.length],
-    ['Pendientes', ordenes.filter(o => o.estado === 'pendiente').length],
-    ['En proceso', ordenes.filter(o => o.estado === 'en_proceso').length],
-    ['Validadas', ordenes.filter(o => o.estado === 'validada').length],
-    ['Entregadas', ordenes.filter(o => o.estado === 'entregada').length],
-    ['Anuladas', ordenes.filter(o => o.estado === 'anulada').length],
+    ['Órdenes en el período', ordenesR.length],
+    ['Pendientes', ordenesR.filter(o => o.estado === 'pendiente').length],
+    ['En proceso', ordenesR.filter(o => o.estado === 'en_proceso').length],
+    ['Validadas', ordenesR.filter(o => o.estado === 'validada').length],
+    ['Entregadas', ordenesR.filter(o => o.estado === 'entregada').length],
+    ['Anuladas', ordenesR.filter(o => o.estado === 'anulada').length],
     ['Resultados capturados', conResultado.length],
     ['Resultados fuera de rango', totalFueraRango]
   ];
@@ -1343,17 +1364,17 @@ function viewReportes() {
     .sort((a, b) => new Date(b.fecha_captura) - new Date(a.fecha_captura)).slice(0, 15);
 
   // 6. Tiempo de validación (horas desde creada hasta validada) + backlog de órdenes abiertas
-  const validadasConTiempo = ordenes.filter(o => o.fecha_validacion).map(o => ({
+  const validadasConTiempo = ordenesR.filter(o => o.fecha_validacion).map(o => ({
     o, horas: (new Date(o.fecha_validacion) - new Date(o.fecha)) / 3600000
   }));
   const promedioHoras = validadasConTiempo.length ? (validadasConTiempo.reduce((s, x) => s + x.horas, 0) / validadasConTiempo.length) : null;
-  const abiertas = ordenes.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso')
+  const abiertas = ordenesR.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso')
     .map(o => ({ o, horas: (new Date() - new Date(o.fecha)) / 3600000 }))
     .sort((a, b) => b.horas - a.horas).slice(0, 10);
 
   // 7. Órdenes por médico referente
   const conteoMedicos = {};
-  ordenes.forEach(o => { const m = (o.medico || '').trim(); if (m) conteoMedicos[m] = (conteoMedicos[m] || 0) + 1; });
+  ordenesR.forEach(o => { const m = (o.medico || '').trim(); if (m) conteoMedicos[m] = (conteoMedicos[m] || 0) + 1; });
   const medicosTop = Object.entries(conteoMedicos).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
   // 8. Producción por usuario
@@ -1368,13 +1389,13 @@ function viewReportes() {
 
   // 9. Pacientes recurrentes
   const conteoPac = {};
-  ordenes.forEach(o => { conteoPac[o.paciente_id] = (conteoPac[o.paciente_id] || 0) + 1; });
+  ordenesR.forEach(o => { conteoPac[o.paciente_id] = (conteoPac[o.paciente_id] || 0) + 1; });
   const recurrentes = Object.entries(conteoPac).map(([id, n]) => ({ pac: pacienteById(Number(id)), n }))
     .filter(x => x.pac && x.n > 1).sort((a, b) => b.n - a.n).slice(0, 10);
 
   // 10. Volumen de órdenes por mes
   const conteoMes = {};
-  ordenes.forEach(o => { const m = o.fecha.slice(0, 7); conteoMes[m] = (conteoMes[m] || 0) + 1; });
+  ordenesR.forEach(o => { const m = o.fecha.slice(0, 7); conteoMes[m] = (conteoMes[m] || 0) + 1; });
   const volumenMensual = Object.entries(conteoMes).sort((a, b) => a[0].localeCompare(b[0])).slice(-12);
 
   return `
@@ -1391,7 +1412,37 @@ function viewReportes() {
       </div>
     </div>
     <h1>Reportes</h1>
-    <p class="lead">Calculados en el momento a partir de los datos actuales del sistema.</p>
+    <p class="lead">Calculados a partir de las órdenes del período seleccionado.</p>
+
+    <div class="card no-print">
+      <h2 style="font-size:14px;">Período</h2>
+      <div class="row">
+        <div><label>Ver</label>
+          <select id="reporte-filtro-modo">
+            <option value="general" ${reporteFiltro.modo==='general'?'selected':''}>General (todo)</option>
+            <option value="anio" ${reporteFiltro.modo==='anio'?'selected':''}>Por año</option>
+            <option value="mes" ${reporteFiltro.modo==='mes'?'selected':''}>Por mes</option>
+            <option value="rango" ${reporteFiltro.modo==='rango'?'selected':''}>Rango de fechas</option>
+          </select>
+        </div>
+        <div id="reporte-filtro-anio-wrap" style="display:${reporteFiltro.modo==='anio'?'block':'none'};">
+          <label>Año</label>
+          <select id="reporte-filtro-anio">${aniosDisponibles.map(a => `<option value="${a}" ${String(reporteFiltro.anio)===String(a)?'selected':''}>${a}</option>`).join('')}</select>
+        </div>
+        <div id="reporte-filtro-mes-wrap" style="display:${reporteFiltro.modo==='mes'?'block':'none'};">
+          <label>Mes</label>
+          <select id="reporte-filtro-mes">${mesesDisponibles.map(m => `<option value="${m}" ${reporteFiltro.mes===m?'selected':''}>${m}</option>`).join('')}</select>
+        </div>
+        <div id="reporte-filtro-desde-wrap" style="display:${reporteFiltro.modo==='rango'?'block':'none'};">
+          <label>Desde</label><input type="date" id="reporte-filtro-desde" value="${reporteFiltro.desde}">
+        </div>
+        <div id="reporte-filtro-hasta-wrap" style="display:${reporteFiltro.modo==='rango'?'block':'none'};">
+          <label>Hasta</label><input type="date" id="reporte-filtro-hasta" value="${reporteFiltro.hasta}">
+        </div>
+      </div>
+      <button class="btn" id="btn-aplicar-filtro-reporte">Aplicar</button>
+    </div>
+
     <button class="btn secondary no-print" onclick="window.print()" style="margin-bottom:16px;">Descargar / Imprimir PDF</button>
 
     <div class="card">
@@ -1571,6 +1622,27 @@ function attachHandlers() {
     document.querySelectorAll('#tabla-informe tbody tr').forEach(row => {
       row.style.display = (!q || row.dataset.busca.includes(q)) ? '' : 'none';
     });
+  });
+
+  const filtroModo = document.getElementById('reporte-filtro-modo');
+  if (filtroModo) filtroModo.addEventListener('change', () => {
+    document.getElementById('reporte-filtro-anio-wrap').style.display = filtroModo.value === 'anio' ? 'block' : 'none';
+    document.getElementById('reporte-filtro-mes-wrap').style.display = filtroModo.value === 'mes' ? 'block' : 'none';
+    document.getElementById('reporte-filtro-desde-wrap').style.display = filtroModo.value === 'rango' ? 'block' : 'none';
+    document.getElementById('reporte-filtro-hasta-wrap').style.display = filtroModo.value === 'rango' ? 'block' : 'none';
+  });
+
+  const btnAplicarFiltro = document.getElementById('btn-aplicar-filtro-reporte');
+  if (btnAplicarFiltro) btnAplicarFiltro.addEventListener('click', () => {
+    const modo = document.getElementById('reporte-filtro-modo').value;
+    reporteFiltro = {
+      modo,
+      anio: document.getElementById('reporte-filtro-anio') ? document.getElementById('reporte-filtro-anio').value : '',
+      mes: document.getElementById('reporte-filtro-mes') ? document.getElementById('reporte-filtro-mes').value : '',
+      desde: document.getElementById('reporte-filtro-desde') ? document.getElementById('reporte-filtro-desde').value : '',
+      hasta: document.getElementById('reporte-filtro-hasta') ? document.getElementById('reporte-filtro-hasta').value : ''
+    };
+    render();
   });
 
   const buscadorPacientes = document.getElementById('buscador-pacientes');
