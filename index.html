@@ -239,6 +239,7 @@ let laboratorio = {};
 let bitacora = [];
 let insumos = [];
 let pedidoResumen = [];
+let historialPedidos = [];
 let usuarios = [];
 let view = 'pacientes';
 let ctxOrdenId = null;
@@ -264,6 +265,7 @@ const PERMISOS = {
   catalogo: ['administrador'],
   'catalogo-insumos': ['administrador'],
   pedidos: ['tecnico','administrador'],
+  'historial-pedidos': ['tecnico','administrador'],
   laboratorio: ['administrador'],
   usuarios: ['administrador'],
   bitacora: ['administrador'],
@@ -373,11 +375,16 @@ async function fetchTodo() {
   }));
   bitacora = [];
   usuarios = [];
+  historialPedidos = [];
   if (sesion.rol === 'administrador') {
     const { data: bit } = await supabase.from('bitacora').select('*').order('fecha', { ascending: false }).limit(500);
     bitacora = (bit || []).slice().reverse();
     const { data: perf } = await supabase.from('perfiles').select('*').order('creado_en');
     usuarios = perf || [];
+  }
+  if (sesion.rol === 'tecnico' || sesion.rol === 'administrador') {
+    const { data: peds } = await supabase.from('pedidos_insumos').select('*').order('fecha', { ascending: false }).limit(200);
+    historialPedidos = peds || [];
   }
 }
 
@@ -408,6 +415,7 @@ const NAV_ICONS = {
   usuarios: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   bitacora: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
   pedidos: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  'historial-pedidos': '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/><path d="M8 3.5 6 6"/><path d="M16 3.5 18 6"/>',
   'catalogo-insumos': '<path d="M20 7h-3V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2H4a1 1 0 0 0-1 1v3a2 2 0 0 0 2 2h1v7a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-7h1a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1z"/><path d="M9 5h6v2H9z"/>',
   'mi-cuenta': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
 };
@@ -459,7 +467,13 @@ function renderResumenPedido() {
     if (vacio) vacio.style.display = 'block';
   } else {
     if (vacio) vacio.style.display = 'none';
-    cont.innerHTML = pedidoResumen.map(item => `
+    const encabezado = `
+      <div class="testrow" style="border-top:none;padding:4px 14px;">
+        <span class="refbox" style="flex:1;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Insumo</span>
+        <span class="refbox" style="width:80px;text-align:center;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Cantidad</span>
+        <span style="width:32px;"></span>
+      </div>`;
+    cont.innerHTML = encabezado + pedidoResumen.map(item => `
       <div class="testrow pedido-touch">
         <label style="flex:1;">${item.nombre}${item.unidad ? ' <span class="refbox">('+item.unidad+')</span>' : ''}</label>
         <input type="number" min="1" value="${item.cantidad}" placeholder="Cant." class="resumen-cantidad" oninput="actualizarCantidadResumen('${item.key}', this.value)" style="width:80px;">
@@ -597,6 +611,7 @@ function render() {
       ['ordenes','Órdenes', ordenes.length || null],
       ['medicos','Médicos', medicos.length || null],
       ['pedidos','Pedido de insumos', null],
+      ['historial-pedidos','Historial de pedidos', null],
     ]},
     { header: 'Análisis', items: [
       ['reportes','Reportes', null],
@@ -691,6 +706,7 @@ function renderView() {
   if (view === 'usuarios') return viewUsuarios();
   if (view === 'bitacora') return viewBitacora();
   if (view === 'pedidos') return viewPedidos();
+  if (view === 'historial-pedidos') return viewHistorialPedidos();
   if (view === 'catalogo-insumos') return viewCatalogoInsumos();
   if (view === 'mi-cuenta') return viewMiCuenta();
   return '';
@@ -1022,6 +1038,26 @@ function viewPedidos() {
       <textarea id="pedido-nota" rows="3" placeholder="Cualquier detalle adicional para el pedido..."></textarea>
       <button class="btn" id="btn-enviar-pedido" style="margin-top:14px;" disabled>📦 Enviar pedido</button>
       <p id="pedido-estado" style="margin-top:10px;font-weight:600;"></p>
+    </div>
+  `;
+}
+
+function viewHistorialPedidos() {
+  return `
+    <h1>Historial de pedidos</h1>
+    <p class="lead">Solo para consulta — los pedidos ya enviados no se pueden editar aquí.</p>
+    <div class="card">
+      ${historialPedidos.length === 0 ? '<div class="empty">Todavía no hay pedidos registrados.</div>' : historialPedidos.map(p => `
+        <details class="catgroup">
+          <summary>
+            <span class="catname" onclick="event.preventDefault(); this.closest('details').open = !this.closest('details').open;">${new Date(p.fecha).toLocaleString()} · ${p.tecnico || '—'}</span>
+            <span class="catcount">${(p.items || []).length} artículo(s)</span>
+          </summary>
+          <table style="margin:0 14px 10px;width:calc(100% - 28px);"><thead><tr><th>Insumo</th><th style="text-align:center;">Cantidad</th></tr></thead><tbody>
+            ${(p.items || []).map(it => `<tr><td>${it.nombre}${it.unidad ? ' <span class="refbox">('+it.unidad+')</span>' : ''}</td><td style="text-align:center;">${it.cantidad}</td></tr>`).join('')}
+          </tbody></table>
+          ${p.nota ? `<p class="refbox" style="margin:0 14px 12px;">Nota: ${p.nota}</p>` : ''}
+        </details>`).join('')}
     </div>
   `;
 }
@@ -1973,6 +2009,9 @@ function attachHandlers() {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload)
       });
+      const { data: nuevoPedido } = await supabase.from('pedidos_insumos')
+        .insert({ tecnico: sesion.nombre, nota: payload.nota, items }).select().single();
+      if (nuevoPedido) historialPedidos.unshift(nuevoPedido);
       estado.style.color = 'var(--primary-dark)';
       estado.textContent = '✓ Pedido enviado correctamente — ' + new Date().toLocaleTimeString();
       toast('📦 Pedido enviado correctamente');
