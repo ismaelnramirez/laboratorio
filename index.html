@@ -102,6 +102,17 @@
 #labsys-root details.catgroup summary .catname { font-size: 13px; font-weight: 600; color: var(--primary-dark); flex: 1; }
 #labsys-root details.catgroup summary .catcount { font-size: 11px; color: var(--muted); }
 #labsys-root .testrow { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--bg); }
+#labsys-root .pedido-touch { padding: 12px 14px; }
+#labsys-root .pedido-touch input[type=checkbox] { width: 21px; height: 21px; flex-shrink: 0; }
+#labsys-root .pedido-touch label { font-size: 14px; }
+#labsys-root .resumen-cantidad { text-align: center; }
+#labsys-root button.btn:disabled { opacity: .45; cursor: not-allowed; }
+@media (max-width: 640px) {
+  #labsys-root .main { padding-left: 18px; padding-right: 18px; }
+  #labsys-root .pedido-touch { padding: 14px 10px; }
+  #labsys-root .pedido-touch label { font-size: 15px; }
+  #labsys-root button.btn { padding: 12px 18px; font-size: 14px; }
+}
 #labsys-root .testrow label { margin: 0; color: var(--text); font-size: 13px; display: inline; }
 #labsys-root .refbox { font-size: 12px; color: var(--muted); margin-top: 2px; }
 #labsys-root .oor { color: var(--danger); font-weight: 600; }
@@ -227,6 +238,7 @@ let medicos = [];
 let laboratorio = {};
 let bitacora = [];
 let insumos = [];
+let pedidoResumen = [];
 let usuarios = [];
 let view = 'pacientes';
 let ctxOrdenId = null;
@@ -436,6 +448,46 @@ function syncOpciones(pruebaId) {
   if (oculto) oculto.value = lineas.join('\n');
 }
 window.syncOpciones = syncOpciones;
+
+function renderResumenPedido() {
+  const cont = document.getElementById('resumen-pedido-lista');
+  const vacio = document.getElementById('resumen-vacio');
+  const btn = document.getElementById('btn-enviar-pedido');
+  if (!cont) return;
+  if (pedidoResumen.length === 0) {
+    cont.innerHTML = '';
+    if (vacio) vacio.style.display = 'block';
+  } else {
+    if (vacio) vacio.style.display = 'none';
+    cont.innerHTML = pedidoResumen.map(item => `
+      <div class="testrow pedido-touch">
+        <label style="flex:1;">${item.nombre}${item.unidad ? ' <span class="refbox">('+item.unidad+')</span>' : ''}</label>
+        <input type="number" min="1" value="${item.cantidad}" placeholder="Cant." class="resumen-cantidad" oninput="actualizarCantidadResumen('${item.key}', this.value)" style="width:80px;">
+        <button type="button" class="btn small secondary" onclick="quitarDelResumen('${item.key}')" title="Quitar">✕</button>
+      </div>`).join('');
+  }
+  if (btn) btn.disabled = !(pedidoResumen.length > 0 && pedidoResumen.every(x => Number(x.cantidad) > 0));
+}
+window.toggleInsumoResumen = function(chk) {
+  if (chk.checked) {
+    pedidoResumen.push({ key: chk.id, nombre: chk.dataset.nombre, unidad: chk.dataset.unidad, cantidad: 1 });
+  } else {
+    pedidoResumen = pedidoResumen.filter(x => x.key !== chk.id);
+  }
+  renderResumenPedido();
+};
+window.actualizarCantidadResumen = function(key, val) {
+  const item = pedidoResumen.find(x => x.key === key);
+  if (item) item.cantidad = val;
+  const btn = document.getElementById('btn-enviar-pedido');
+  if (btn) btn.disabled = !(pedidoResumen.length > 0 && pedidoResumen.every(x => Number(x.cantidad) > 0));
+};
+window.quitarDelResumen = function(key) {
+  pedidoResumen = pedidoResumen.filter(x => x.key !== key);
+  const chk = document.getElementById(key);
+  if (chk) chk.checked = false;
+  renderResumenPedido();
+};
 
 function qrTag(data, cellSize) {
   try {
@@ -915,6 +967,7 @@ function viewCatalogoInsumos() {
 function viewPedidos() {
   const insumosActivos = insumos.filter(i => i.activo !== false);
   const categorias = [...new Set(insumosActivos.map(i => i.categoria || 'Otros'))];
+  pedidoResumen = [];
   return `
     <div class="informe-header" style="margin-bottom:16px;">
       <div>
@@ -929,7 +982,7 @@ function viewPedidos() {
       </div>
     </div>
     <h1>Orden de compra</h1>
-    <p class="lead">Elige lo que necesitas de la lista, o agrégalo manualmente si no aparece.</p>
+    <p class="lead">Marca lo que necesitas — la cantidad la ajustas abajo, en el resumen.</p>
     <div class="card">
       <input type="text" id="buscador-insumos" placeholder="Buscar insumo, categoría o presentación..." style="margin-bottom:6px;">
       <p class="refbox" id="contador-insumos" style="margin:0 0 12px;">${insumosActivos.length} insumos disponibles</p>
@@ -941,10 +994,9 @@ function viewPedidos() {
             <span class="catcount">${insumosActivos.filter(i => (i.categoria || 'Otros') === cat).length} artículos</span>
           </summary>
           ${insumosActivos.filter(i => (i.categoria || 'Otros') === cat).map(i => `
-            <div class="testrow" data-busca="${(i.nombre + ' ' + (i.unidad||'') + ' ' + (i.categoria||'')).toLowerCase()}">
-              <input type="checkbox" class="pedido-item" data-nombre="${i.nombre}" data-unidad="${i.unidad || ''}" id="ins-${i.id}">
+            <div class="testrow pedido-touch" data-busca="${(i.nombre + ' ' + (i.unidad||'') + ' ' + (i.categoria||'')).toLowerCase()}">
+              <input type="checkbox" class="pedido-item" data-nombre="${i.nombre}" data-unidad="${i.unidad || ''}" id="ins-${i.id}" onchange="toggleInsumoResumen(this)">
               <label for="ins-${i.id}" style="flex:1;">${i.nombre} ${i.unidad ? '<span class="refbox">('+i.unidad+')</span>' : ''}</label>
-              <input type="number" min="1" placeholder="Cant." class="pedido-cantidad" data-para="ins-${i.id}" style="width:80px;">
             </div>`).join('')}
         </details>`).join('')}
       </div>
@@ -952,14 +1004,23 @@ function viewPedidos() {
 
     <div class="card">
       <h2>¿No encontraste lo que buscabas?</h2>
-      <div id="manuales-lista"></div>
+      <div class="row" id="manual-form-row" style="display:none;margin-bottom:10px;">
+        <div style="flex:2"><input type="text" id="manual-nombre-input" placeholder="Nombre del insumo"></div>
+        <div style="flex:0;"><button class="btn small" type="button" id="btn-confirmar-manual">Agregar</button></div>
+      </div>
       <button class="btn secondary small" id="btn-agregar-manual" type="button">+ Agregar insumo manualmente</button>
+    </div>
+
+    <div class="card">
+      <h2>Resumen del pedido</h2>
+      <p class="empty" id="resumen-vacio">Todavía no has seleccionado ningún insumo.</p>
+      <div id="resumen-pedido-lista"></div>
     </div>
 
     <div class="card">
       <label>Nota (opcional)</label>
       <textarea id="pedido-nota" rows="3" placeholder="Cualquier detalle adicional para el pedido..."></textarea>
-      <button class="btn" id="btn-enviar-pedido" style="margin-top:14px;">📦 Enviar pedido</button>
+      <button class="btn" id="btn-enviar-pedido" style="margin-top:14px;" disabled>📦 Enviar pedido</button>
       <p id="pedido-estado" style="margin-top:10px;font-weight:600;"></p>
     </div>
   `;
@@ -1868,36 +1929,34 @@ function attachHandlers() {
 
   const btnAgregarManual = document.getElementById('btn-agregar-manual');
   if (btnAgregarManual) btnAgregarManual.addEventListener('click', () => {
-    const cont = document.getElementById('manuales-lista');
-    const fila = document.createElement('div');
-    fila.className = 'row';
-    fila.style.marginBottom = '8px';
-    fila.innerHTML = `
-      <div style="flex:2"><input type="text" class="manual-nombre" placeholder="Nombre del insumo"></div>
-      <div><input type="number" min="1" class="manual-cantidad" placeholder="Cant."></div>
-      <div style="flex:0;"><button type="button" class="btn small secondary" onclick="this.closest('.row').remove()">Quitar</button></div>
-    `;
-    cont.appendChild(fila);
+    const fila = document.getElementById('manual-form-row');
+    fila.style.display = 'flex';
+    document.getElementById('manual-nombre-input').focus();
+  });
+
+  const btnConfirmarManual = document.getElementById('btn-confirmar-manual');
+  if (btnConfirmarManual) btnConfirmarManual.addEventListener('click', () => {
+    const inp = document.getElementById('manual-nombre-input');
+    const nombre = inp.value.trim();
+    if (!nombre) { toast('Escribe el nombre del insumo'); return; }
+    const key = 'manual-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    pedidoResumen.push({ key, nombre, unidad: '', cantidad: 1, manual: true });
+    inp.value = '';
+    document.getElementById('manual-form-row').style.display = 'none';
+    renderResumenPedido();
+    toast('Agregado al resumen — ajusta la cantidad abajo');
   });
 
   const btnEnviarPedido = document.getElementById('btn-enviar-pedido');
   if (btnEnviarPedido) btnEnviarPedido.addEventListener('click', async () => {
-    const items = [];
-    document.querySelectorAll('.pedido-item:checked').forEach(chk => {
-      const cantInput = document.querySelector(`.pedido-cantidad[data-para="${chk.id}"]`);
-      items.push({ nombre: chk.dataset.nombre, unidad: chk.dataset.unidad, cantidad: (cantInput && cantInput.value) || '1' });
-    });
-    document.querySelectorAll('.manual-nombre').forEach(inp => {
-      const nombre = inp.value.trim();
-      if (!nombre) return;
-      const cant = inp.closest('.row').querySelector('.manual-cantidad');
-      items.push({ nombre, unidad: '', cantidad: (cant && cant.value) || '1' });
-    });
-    if (items.length === 0) { toast('Selecciona o agrega al menos un insumo'); return; }
+    if (pedidoResumen.length === 0) { toast('Selecciona o agrega al menos un insumo'); return; }
+    const sinCantidad = pedidoResumen.some(x => !(Number(x.cantidad) > 0));
+    if (sinCantidad) { toast('Todos los insumos necesitan una cantidad mayor a 0'); return; }
     if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.indexOf('PEGA_AQUI') === 0) {
       toast('Falta configurar el enlace de Google Sheets (avísale al administrador)');
       return;
     }
+    const items = pedidoResumen.map(x => ({ nombre: x.nombre, unidad: x.unidad, cantidad: x.cantidad }));
     const estado = document.getElementById('pedido-estado');
     estado.style.color = 'var(--text)';
     estado.textContent = 'Enviando...';
@@ -1920,13 +1979,12 @@ function attachHandlers() {
       logAccion('Envió pedido de insumos', items.length + ' insumo(s)');
       // Limpiar el formulario sin recargar toda la pantalla, para no borrar el mensaje de arriba
       document.querySelectorAll('.pedido-item:checked').forEach(chk => chk.checked = false);
-      document.querySelectorAll('.pedido-cantidad').forEach(inp => inp.value = '');
       document.getElementById('pedido-nota').value = '';
-      document.getElementById('manuales-lista').innerHTML = '';
+      pedidoResumen = [];
+      renderResumenPedido();
     } catch (err) {
       estado.style.color = 'var(--danger)';
       estado.textContent = 'Error al enviar el pedido: ' + err.message;
-    } finally {
       btnEnviarPedido.disabled = false;
     }
   });
