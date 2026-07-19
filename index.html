@@ -139,6 +139,8 @@
 #labsys-root .capgroup { margin-bottom: 18px; }
 #labsys-root .capgroup h3 { font-size: 13px; font-weight: 600; color: var(--primary-dark); margin: 0 0 8px; padding-top: 10px; border-top: 1px solid var(--border); }
 #labsys-root .capgroup:first-child h3 { border-top: none; padding-top: 0; }
+#labsys-root tr.subgrupo-row td { background: var(--bg-soft, #f4f6f8); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--primary-dark); padding: 8px 10px; }
+#labsys-root .testrow-subgrupo { margin: 10px 0 4px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--primary-dark); }
 #labsys-root .firma-block { width: 260px; margin: 70px 0 0 auto; text-align: center; }
 #labsys-root .firma-linea { border-top: 1px solid var(--text); margin-bottom: 6px; }
 #labsys-root .login-wrap { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; background: #0a4638; }
@@ -232,6 +234,40 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxEM7cJrk2qGv
 
 let CATEGORIAS = [];
 let PRUEBAS = [];
+
+// Sugerencias rápidas para captura de pruebas de texto (aparecen como datalist, no restringen la escritura libre)
+const SUGERENCIAS_TEXTO = {
+  'COPROLOGÍA': {
+    'SANGRE': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'RESTOS ALIMENTICIOS': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'MOCO': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'MICROBIOTA INTESTINAL': ['AUMENTADA'],
+    'LEUCOCITOS': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD', 'AUMENTADA'],
+    'ERITROCITOS': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD', 'AUMENTADA'],
+    'ALMIDONES': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD', 'AUMENTADA'],
+    'JABONES': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD', 'AUMENTADA'],
+    'GRASAS': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD', 'AUMENTADA'],
+    'LEVADURAS': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD', 'AUMENTADA'],
+    'CÉLULAS VEGETALES': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD', 'AUMENTADA'],
+    'FIBRAS MUSCULARES': ['NO SE OBSERVÓ', 'REGULAR CANTIDAD', 'ABUNDANTE CANTIDAD', 'AUMENTADA']
+  },
+  'UROLOGÍA': {
+    'CÉLULAS EPITELIALES': ['NO SE OBSERVÓ', 'ESCASA CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'CÉLULAS RENALES': ['NO SE OBSERVÓ', 'ESCASA CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'BACTERIAS': ['NO SE OBSERVÓ', 'ESCASA CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'MOCO': ['NO SE OBSERVÓ', 'ESCASA CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'LEVADURAS': ['NO SE OBSERVÓ', 'ESCASA CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'CRISTALES': ['NO SE OBSERVÓ', 'ESCASA CANTIDAD', 'ABUNDANTE CANTIDAD'],
+    'CILINDROS': ['NO SE OBSERVÓ', 'ESCASA CANTIDAD', 'ABUNDANTE CANTIDAD']
+  }
+};
+function sugerenciasParaPrueba(p) {
+  const cat = CATEGORIAS.find(c => c.id === p.categoria_id);
+  const catKey = (cat ? cat.nombre : '').trim().toUpperCase();
+  const grupo = SUGERENCIAS_TEXTO[catKey];
+  if (!grupo) return null;
+  return grupo[(p.nombre || '').trim().toUpperCase()] || null;
+}
 let pacientes = [];
 let ordenes = [];
 let medicos = [];
@@ -352,7 +388,7 @@ async function fetchTodo() {
   CATEGORIAS = cat.data || [];
   PRUEBAS = (pru.data || []).map(p => ({
     id: p.id, categoria_id: p.categoria_id, nombre: p.nombre, unidad: p.unidad, tipo: p.tipo, activo: p.activo,
-    opciones: p.opciones || null,
+    opciones: p.opciones || null, subgrupo: p.subgrupo || null,
     ref: (p.valores_referencia || []).map(r => ({
       sexo: r.sexo, min: r.valor_min ?? undefined, max: r.valor_max ?? undefined,
       texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined
@@ -1199,11 +1235,23 @@ function viewNuevaOrden() {
             <span class="catname" onclick="event.preventDefault(); this.closest('details').open = !this.closest('details').open;">${c.nombre}</span>
             <span class="catcount">${items.length} pruebas</span>
           </summary>
-          ${items.map(p => `
-            <div class="testrow">
-              <input type="checkbox" class="chk-prueba chk-prueba-${c.id}" value="${p.id}" id="chk-${p.id}">
-              <label for="chk-${p.id}">${p.nombre} ${p.unidad ? '<span class="refbox">('+p.unidad+')</span>' : ''}</label>
-            </div>`).join('')}
+          ${(() => {
+            const bloques = [];
+            let last;
+            items.forEach(p => {
+              const sg = p.subgrupo || null;
+              if (bloques.length === 0 || sg !== last) { bloques.push({ subgrupo: sg, items: [] }); last = sg; }
+              bloques[bloques.length - 1].items.push(p);
+            });
+            return bloques.map(b => `
+              ${b.subgrupo ? `<div class="testrow-subgrupo">${b.subgrupo}</div>` : ''}
+              ${b.items.map(p => `
+                <div class="testrow">
+                  <input type="checkbox" class="chk-prueba chk-prueba-${c.id}" value="${p.id}" id="chk-${p.id}">
+                  <label for="chk-${p.id}">${p.nombre} ${p.unidad ? '<span class="refbox">('+p.unidad+')</span>' : ''}</label>
+                </div>`).join('')}
+            `).join('');
+          })()}
         </details>`;
       }).join('')}
       <button class="btn" id="btn-crear-orden">Crear orden</button>
@@ -1244,6 +1292,23 @@ function groupByCat(detalle) {
   })).filter(g => g.items.length);
 }
 
+// Subdivide una lista ya ordenada de resultados en bloques consecutivos por subgrupo
+// (ej. "Examen Físico" / "Examen Bioquímico" / "Examen Microscópico" / "Otros" dentro de Urología).
+// Si ninguna prueba tiene subgrupo, regresa un solo bloque sin título.
+function agruparPorSubgrupo(items) {
+  const out = [];
+  let last;
+  let huboAlguno = false;
+  items.forEach(d => {
+    const p = pruebaById(d.prueba_id);
+    const sg = p.subgrupo || null;
+    if (sg) huboAlguno = true;
+    if (out.length === 0 || sg !== last) { out.push({ subgrupo: sg, items: [] }); last = sg; }
+    out[out.length - 1].items.push(d);
+  });
+  return huboAlguno ? out : [{ subgrupo: null, items }];
+}
+
 function viewCaptura() {
   const ordenesAbiertas = ordenes.filter(o => o.estado === 'pendiente' || o.estado === 'en_proceso');
   const orden = ctxOrdenId ? ordenById(Number(ctxOrdenId)) : null;
@@ -1278,7 +1343,7 @@ function viewCaptura() {
         <div class="capgroup">
           <h3>${g.cat.nombre}</h3>
           <table><thead><tr><th>Prueba</th><th>Resultado</th><th>Nota</th><th>Referencia</th><th></th></tr></thead><tbody>
-            ${g.items.map(d => {
+            ${agruparPorSubgrupo(g.items).map(sg => (sg.subgrupo ? '<tr class="subgrupo-row"><td colspan="5">'+sg.subgrupo+'</td></tr>' : '') + sg.items.map(d => {
               const p = pruebaById(d.prueba_id);
               const ref = refFor(p, pac);
               const oorStyle = d.fuera_de_rango ? ' style="border-color:var(--danger);background:var(--danger-light);color:var(--danger);font-weight:600;"' : '';
@@ -1305,9 +1370,18 @@ function viewCaptura() {
                     </div>
                   </details>`;
               } else {
-                inputHtml = p.tipo === 'numerico'
-                  ? `<input type="number" step="any" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_numerico ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`
-                  : `<input type="text" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_texto ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`;
+                if (p.tipo === 'numerico') {
+                  inputHtml = `<input type="number" step="any" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_numerico ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`;
+                } else {
+                  const sugs = sugerenciasParaPrueba(p);
+                  if (sugs) {
+                    const listId = 'sug-' + d.prueba_id;
+                    inputHtml = `<input type="text" class="cap-input" list="${listId}" data-id="${d.prueba_id}" value="${d.valor_texto ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>
+                      <datalist id="${listId}">${sugs.map(s => `<option value="${s}">`).join('')}</datalist>`;
+                  } else {
+                    inputHtml = `<input type="text" class="cap-input" data-id="${d.prueba_id}" value="${d.valor_texto ?? ''}"${oorStyle} ${d.estado==='validada'?'disabled':''}>`;
+                  }
+                }
               }
               return `<tr>
                 <td>${p.nombre}</td>
@@ -1317,7 +1391,7 @@ function viewCaptura() {
                 <td class="refbox">${refTexto(ref)}</td>
                 <td><span class="pill ${d.estado}">${d.estado}</span></td>
               </tr>`;
-            }).join('')}
+            }).join('')).join('')}
           </tbody></table>
         </div>`).join('')}
       <button class="btn no-print" id="btn-guardar-captura">Guardar resultados</button>
@@ -1351,12 +1425,12 @@ function viewCapturaPDF() {
       ${porCategoria.length === 0 ? '<div class="empty">Todavía no hay resultados capturados en esta orden.</div>' : porCategoria.map(g => `
         <div class="informe-cat">${g.cat.nombre}</div>
         <table class="informe-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th></tr></thead><tbody>
-          ${g.items.map(d => {
+          ${agruparPorSubgrupo(g.items).map(sg => (sg.subgrupo ? '<tr class="subgrupo-row"><td colspan="4">'+sg.subgrupo+'</td></tr>' : '') + sg.items.map(d => {
             const p = pruebaById(d.prueba_id);
             const ref = refFor(p, pac);
             const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
             return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td><td style="white-space:pre-line;" class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
-          }).join('')}
+          }).join('')).join('')}
         </tbody></table>
       `).join('')}
       <div class="firma-block">
@@ -1403,7 +1477,7 @@ function viewValidacion() {
         <div class="capgroup">
           <h3>${g.cat.nombre}</h3>
           <table class="valida-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th><th>Capturado por</th></tr></thead><tbody>
-            ${g.items.map(d => {
+            ${agruparPorSubgrupo(g.items).map(sg => (sg.subgrupo ? '<tr class="subgrupo-row"><td colspan="5">'+sg.subgrupo+'</td></tr>' : '') + sg.items.map(d => {
               const p = pruebaById(d.prueba_id);
               const ref = refFor(p, pac);
               const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
@@ -1414,7 +1488,7 @@ function viewValidacion() {
                 <td class="refbox">${refTexto(ref)}</td>
                 <td>${d.capturado_por || '—'}</td>
               </tr>`;
-            }).join('')}
+            }).join('')).join('')}
           </tbody></table>
         </div>`).join('')}
       <button class="btn no-print" id="btn-validar-orden">Validar resultados capturados</button>
@@ -1477,12 +1551,12 @@ function viewInforme() {
       ${porCategoria.length === 0 ? '<div class="empty">Ningún resultado validado todavía.</div>' : porCategoria.map(g => `
         <div class="informe-cat">${g.cat.nombre}</div>
         <table class="informe-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th></tr></thead><tbody>
-          ${g.items.map(d => {
+          ${agruparPorSubgrupo(g.items).map(sg => (sg.subgrupo ? '<tr class="subgrupo-row"><td colspan="4">'+sg.subgrupo+'</td></tr>' : '') + sg.items.map(d => {
             const p = pruebaById(d.prueba_id);
             const ref = refFor(p, pac);
             const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
             return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td><td style="white-space:pre-line;" class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
-          }).join('')}
+          }).join('')).join('')}
         </tbody></table>
       `).join('')}
       <p class="refbox" style="margin-top:20px;">Validado por: ${validadas[0] ? validadas[0].validado_por : '—'} &nbsp;·&nbsp; ${orden.fecha_validacion ? new Date(orden.fecha_validacion).toLocaleString() : ''}</p>
