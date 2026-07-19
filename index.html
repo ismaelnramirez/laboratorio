@@ -1240,6 +1240,7 @@ function viewOrdenes() {
 function groupByCat(detalle) {
   return CATEGORIAS.map(c => ({
     cat: c, items: detalle.filter(d => pruebaById(d.prueba_id).categoria_id === c.id)
+                           .sort((a, b) => a.prueba_id - b.prueba_id)
   })).filter(g => g.items.length);
 }
 
