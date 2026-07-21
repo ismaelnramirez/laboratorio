@@ -397,7 +397,7 @@ async function fetchTodo() {
   laboratorio = lab.data || {};
   pacientes = (pac.data || []).map(p => ({
     id: p.id, nombres: p.nombres, apellidos: p.apellidos, fnac: p.fecha_nacimiento,
-    sexo: p.sexo, direccion: p.direccion, telefono: p.telefono
+    sexo: p.sexo, direccion: p.direccion, telefono: p.telefono, dpi: p.dpi
   }));
   medicos = med.data || [];
   ordenes = (ord.data || []).map(o => ({
@@ -770,6 +770,7 @@ function viewPacientes() {
         </div>
         <div class="row">
           <div><label>Teléfono</label><input type="text" name="telefono" value="${editando ? (editando.telefono||'') : ''}"></div>
+          <div><label id="label-dpi">DPI ${editando && edad(editando.fnac) >= 18 ? '(obligatorio)' : editando ? '(opcional)' : ''}</label><input type="text" id="input-dpi" name="dpi" inputmode="numeric" placeholder="0000 00000 0000" value="${editando ? (editando.dpi||'') : ''}" ${editando && edad(editando.fnac) >= 18 ? 'required' : ''}></div>
         </div>
         <label>Dirección</label>
         <input type="text" name="direccion" placeholder="Dirección de residencia" value="${editando ? (editando.direccion||'') : ''}">
@@ -2213,6 +2214,19 @@ function attachHandlers() {
   });
 
   const fp = document.getElementById('form-paciente');
+  if (fp) {
+    const fnacInput = fp.querySelector('[name="fnac"]');
+    const dpiInput = document.getElementById('input-dpi');
+    const dpiLabel = document.getElementById('label-dpi');
+    const actualizarDpiRequerido = () => {
+      if (!fnacInput || !dpiInput || !dpiLabel) return;
+      const esMayor = fnacInput.value && edad(fnacInput.value) >= 18;
+      dpiInput.required = !!esMayor;
+      dpiLabel.textContent = 'DPI ' + (esMayor ? '(obligatorio)' : '(opcional)');
+    };
+    if (fnacInput) fnacInput.addEventListener('change', actualizarDpiRequerido);
+    actualizarDpiRequerido();
+  }
   if (fp) fp.addEventListener('submit', async e => {
     e.preventDefault();
     const fd = new FormData(fp);
@@ -2221,6 +2235,12 @@ function attachHandlers() {
     const fnacVal = fd.get('fnac');
     const nombresVal = fd.get('nombres').trim();
     const apellidosVal = fd.get('apellidos').trim();
+    const dpiVal = (fd.get('dpi') || '').trim();
+
+    if (edad(fnacVal) >= 18 && !dpiVal) {
+      toast('El DPI es obligatorio para pacientes mayores de 18 años');
+      return;
+    }
 
     const porNombre = pacientes.find(p =>
       p.nombres.trim().toLowerCase() === nombresVal.toLowerCase() &&
@@ -2233,21 +2253,21 @@ function attachHandlers() {
     }
 
     if (editandoId) {
-      const patch = { nombres: nombresVal, apellidos: apellidosVal, fecha_nacimiento: fnacVal, sexo: fd.get('sexo'), direccion: fd.get('direccion') || null, telefono: fd.get('telefono') || null };
+      const patch = { nombres: nombresVal, apellidos: apellidosVal, fecha_nacimiento: fnacVal, sexo: fd.get('sexo'), direccion: fd.get('direccion') || null, telefono: fd.get('telefono') || null, dpi: dpiVal || null };
       const { error } = await supabase.from('pacientes').update(patch).eq('id', editandoId);
       if (error) { toast('Error: ' + error.message); return; }
       const p = pacienteById(editandoId);
-      Object.assign(p, { nombres: nombresVal, apellidos: apellidosVal, fnac: fnacVal, sexo: fd.get('sexo'), direccion: fd.get('direccion'), telefono: fd.get('telefono') });
+      Object.assign(p, { nombres: nombresVal, apellidos: apellidosVal, fnac: fnacVal, sexo: fd.get('sexo'), direccion: fd.get('direccion'), telefono: fd.get('telefono'), dpi: dpiVal || null });
       toast('Paciente actualizado');
       logAccion('Editó paciente', nombresVal + ' ' + apellidosVal);
       ctxPacienteEdit = null; render();
     } else {
       const { data, error } = await supabase.from('pacientes').insert({
         nombres: nombresVal, apellidos: apellidosVal, fecha_nacimiento: fnacVal,
-        sexo: fd.get('sexo'), direccion: fd.get('direccion') || null, telefono: fd.get('telefono') || null
+        sexo: fd.get('sexo'), direccion: fd.get('direccion') || null, telefono: fd.get('telefono') || null, dpi: dpiVal || null
       }).select().single();
       if (error) { toast('Error al guardar: ' + error.message); return; }
-      const p = { id: data.id, nombres: data.nombres, apellidos: data.apellidos, fnac: data.fecha_nacimiento, sexo: data.sexo, direccion: data.direccion, telefono: data.telefono };
+      const p = { id: data.id, nombres: data.nombres, apellidos: data.apellidos, fnac: data.fecha_nacimiento, sexo: data.sexo, direccion: data.direccion, telefono: data.telefono, dpi: data.dpi };
       pacientes.push(p); toast('Paciente guardado');
       logAccion('Registró paciente', nombresVal + ' ' + apellidosVal);
       setView('nueva-orden', p.id);
