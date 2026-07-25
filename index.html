@@ -122,6 +122,9 @@
 #labsys-root .chip button:hover { background: rgba(0,0,0,.08); }
 #labsys-root .chips-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-height: 44px; margin-bottom: 8px; }
 #labsys-root .chips-empty { color: var(--muted); font-size: 12px; }
+#labsys-root mark { background: #fff176; color: #1a1a1a; padding: 0 2px; border-radius: 3px; }
+#labsys-root details.catgroup-catalogo { margin-bottom: 12px; }
+#labsys-root details.catgroup-catalogo table { width: calc(100% - 28px); margin: 4px 14px 14px; }
 #labsys-root .backlink { font-size: 12px; color: var(--primary); cursor: pointer; margin-bottom: 14px; display: inline-block; }
 .toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary-dark, #085041); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 999; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
 #labsys-root .banner { background: var(--amber-light); color: var(--amber); border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 18px; }
@@ -277,6 +280,22 @@ function notaEspecialPrueba(p) {
 }
 function escapeAttr(str) {
   return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+// Quita acentos y pasa a minúsculas, para que buscar "glucosa" encuentre "GLUCOSA" o "Glucósa"
+function normalizar(str) {
+  return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+// Envuelve en <mark> la parte de `original` que coincide con `query` (comparación sin acentos/mayúsculas)
+function resaltar(original, query) {
+  if (!query) return escapeAttr(original);
+  const norm = normalizar(original);
+  const q = normalizar(query);
+  const idx = norm.indexOf(q);
+  if (idx === -1) return escapeAttr(original);
+  const antes = escapeAttr(original.slice(0, idx));
+  const medio = escapeAttr(original.slice(idx, idx + q.length));
+  const despues = escapeAttr(original.slice(idx + q.length));
+  return `${antes}<mark>${medio}</mark>${despues}`;
 }
 function sugerenciasParaPrueba(p) {
   if (p.sugerencias && p.sugerencias.length) return p.sugerencias;
@@ -1150,15 +1169,20 @@ function viewCatalogo() {
     <h1>Catálogo de pruebas</h1>
     <p class="lead">Edita una prueba existente o agrega una que no aparezca en el listado.</p>
     <button class="btn" onclick="labsysCatalogo('nueva')">+ Agregar prueba nueva</button>
+    <input type="text" id="buscador-catalogo" placeholder="Buscar por nombre, categoría o unidad..." style="margin:14px 0;">
     ${grupos.map(g => `
-      <div class="card">
-        <h2>${g.cat.nombre}</h2>
+      <details class="catgroup catgroup-catalogo">
+        <summary>
+          <span class="catname">${g.cat.nombre}</span>
+          <span class="catcount">${g.items.length} pruebas</span>
+        </summary>
         <table><thead><tr><th>Prueba</th><th>Unidad</th><th>Tipo</th><th>Referencia</th><th>Estado</th><th></th></tr></thead><tbody>
           ${g.items.map(p => {
             const ref = p.ref && p.ref[0] ? refTexto(p.ref[0]) : '—';
             const inactivo = p.activo === false;
-            return `<tr>
-              <td>${p.nombre}</td>
+            const busca = normalizar([p.nombre, g.cat.nombre, p.unidad].filter(Boolean).join(' '));
+            return `<tr data-busca-catalogo="${busca}">
+              <td><span class="cat-nombre-txt" data-original="${escapeAttr(p.nombre)}">${p.nombre}</span></td>
               <td>${p.unidad || '—'}</td>
               <td>${p.tipo}</td>
               <td class="refbox">${ref}${p.ref && p.ref.length > 1 ? ' (+'+(p.ref.length-1)+')' : ''}</td>
@@ -1170,7 +1194,7 @@ function viewCatalogo() {
             </tr>`;
           }).join('')}
         </tbody></table>
-      </div>`).join('')}
+      </details>`).join('')}
   `;
 }
 
@@ -2212,6 +2236,24 @@ function attachHandlers() {
       });
       det.style.display = (q && visibles === 0) ? 'none' : '';
       if (q) det.open = visibles > 0;
+    });
+  });
+
+  const buscadorCatalogo = document.getElementById('buscador-catalogo');
+  if (buscadorCatalogo) buscadorCatalogo.addEventListener('input', () => {
+    const q = buscadorCatalogo.value.trim();
+    const qNorm = normalizar(q);
+    document.querySelectorAll('#labsys-root .catgroup-catalogo').forEach(det => {
+      let visibles = 0;
+      det.querySelectorAll('tr[data-busca-catalogo]').forEach(row => {
+        const match = !qNorm || row.dataset.buscaCatalogo.includes(qNorm);
+        row.style.display = match ? '' : 'none';
+        if (match) visibles++;
+        const nombreEl = row.querySelector('.cat-nombre-txt');
+        if (nombreEl) nombreEl.innerHTML = resaltar(nombreEl.dataset.original, q);
+      });
+      det.style.display = (qNorm && visibles === 0) ? 'none' : '';
+      if (qNorm) det.open = visibles > 0;
     });
   });
 
