@@ -326,6 +326,7 @@ let sesion = null;
 let loginError = '';
 let mostrarSignup = false;
 let modoMembretado = false; // checkbox "Imprimir en hoja membretada" en Informe / entrega
+let usarFirmaElectronica = false; // checkbox "Usar firma electrónica" en Informe / entrega
 
 const PERMISOS = {
   pacientes: ['secretaria','administrador'],
@@ -773,6 +774,7 @@ function renderLogin() {
 
 window.labsysLogout = async function() { await supabase.auth.signOut(); sesion = null; render(); };
 window.labsysToggleMembretado = function() { modoMembretado = !modoMembretado; render(); };
+window.labsysToggleFirmaElectronica = function() { usarFirmaElectronica = !usarFirmaElectronica; render(); };
 
 function renderView() {
   if (!puedeVer(view)) return '<div class="card"><div class="empty">No tienes permiso para ver esta sección.</div></div>';
@@ -948,6 +950,11 @@ function viewLaboratorio() {
         <input type="file" id="logo-input" accept="image/*">
         ${l.logo ? '<label style="display:flex;align-items:center;gap:8px;margin-top:8px;"><input type="checkbox" id="logo-quitar" style="width:auto;margin:0;"> Quitar el logo actual</label>' : ''}
         <p class="refbox">JPG o PNG, idealmente menor a 300 KB para que no haga lento el sistema.</p>
+        <label>Firma electrónica (imagen con firma y sello)</label>
+        ${l.firma ? `<div style="margin-bottom:8px;"><img src="${l.firma}" alt="Firma actual" style="max-height:100px;max-width:220px;display:block;border:1px solid var(--border);border-radius:6px;padding:6px;background:#fff;"></div>` : ''}
+        <input type="file" id="firma-input" accept="image/*">
+        ${l.firma ? '<label style="display:flex;align-items:center;gap:8px;margin-top:8px;"><input type="checkbox" id="firma-quitar" style="width:auto;margin:0;"> Quitar la firma actual</label>' : ''}
+        <p class="refbox">Se usa solo cuando marcas "Usar firma electrónica" en el informe final. Ideal: fondo blanco o transparente, imagen recortada de cerca a la firma y el sello.</p>
         <button class="btn" type="submit">Guardar datos</button>
       </form>
     </div>
@@ -1641,6 +1648,10 @@ function viewInforme() {
       <input type="checkbox" id="chk-membretado" style="width:auto;margin:0;" ${modoMembretado ? 'checked' : ''} onchange="labsysToggleMembretado()">
       Imprimir en hoja membretada
     </label>
+    <label class="no-print" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:600;${laboratorio.firma ? 'cursor:pointer;' : 'opacity:.5;cursor:not-allowed;'}">
+      <input type="checkbox" id="chk-firma-electronica" style="width:auto;margin:0;" ${usarFirmaElectronica ? 'checked' : ''} ${laboratorio.firma ? '' : 'disabled'} onchange="labsysToggleFirmaElectronica()">
+      Usar firma electrónica${laboratorio.firma ? '' : ' (sube una imagen en Configuración → Laboratorio)'}
+    </label>
     <div class="card" style="position:relative;overflow:hidden;">
       ${orden.estado === 'anulada' ? '<div class="watermark-anulado">ANULADO</div>' : ''}
       ${encabezadoInforme}
@@ -1659,9 +1670,13 @@ function viewInforme() {
       <p class="refbox" style="margin-top:20px;">Validado por: ${validadas[0] ? validadas[0].validado_por : '—'} &nbsp;·&nbsp; ${orden.fecha_validacion ? new Date(orden.fecha_validacion).toLocaleString() : ''}</p>
       ${orden.estado === 'anulada' ? `<p class="refbox oor" style="font-weight:600;">Anulado por: ${orden.anulada_por || '—'} · ${orden.fecha_anulacion ? new Date(orden.fecha_anulacion).toLocaleString() : ''}${orden.motivo_anulacion ? ' · Motivo: '+orden.motivo_anulacion : ''}</p>` : ''}
       <div class="firma-block">
+        ${usarFirmaElectronica && laboratorio.firma ? `
+        <img src="${laboratorio.firma}" alt="Firma y sello" style="max-height:90px;max-width:220px;display:block;margin:0 auto;">
+        ` : `
         <div class="firma-linea"></div>
         <div class="refbox">Firma y sello</div>
         <div class="refbox" style="font-weight:600;color:var(--text);">${laboratorio.responsable || 'Química bióloga'}</div>
+        `}
       </div>
       <div class="no-print" style="margin-top:14px;">
         <button class="btn" onclick="window.print()">Imprimir / PDF</button>
@@ -2541,6 +2556,23 @@ function attachHandlers() {
       });
     } else {
       patch.logo = laboratorio.logo || null;
+    }
+
+    const firmaInput = document.getElementById('firma-input');
+    const firmaQuitar = document.getElementById('firma-quitar');
+    if (firmaQuitar && firmaQuitar.checked) {
+      patch.firma = null;
+    } else if (firmaInput && firmaInput.files && firmaInput.files[0]) {
+      const file = firmaInput.files[0];
+      if (file.size > 800000) { toast('La imagen es muy grande — usa una menor a 800 KB'); return; }
+      patch.firma = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    } else {
+      patch.firma = laboratorio.firma || null;
     }
 
     const { error } = await supabase.from('laboratorio_config').update(patch).eq('id', 1);
