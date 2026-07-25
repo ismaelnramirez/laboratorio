@@ -326,6 +326,7 @@ let sesion = null;
 let loginError = '';
 let mostrarSignup = false;
 let modoMembretado = false; // checkbox "Imprimir en hoja membretada" en Informe / entrega
+let membretadoAlcance = 'todas'; // 'todas' o 'primera' — a cuántas hojas aplica el espacio en blanco
 let usarFirmaElectronica = false; // checkbox "Usar firma electrónica" en Informe / entrega
 
 const PERMISOS = {
@@ -774,6 +775,7 @@ function renderLogin() {
 
 window.labsysLogout = async function() { await supabase.auth.signOut(); sesion = null; render(); };
 window.labsysToggleMembretado = function() { modoMembretado = !modoMembretado; render(); };
+window.labsysSetMembretadoAlcance = function(v) { membretadoAlcance = v; render(); };
 window.labsysToggleFirmaElectronica = function() { usarFirmaElectronica = !usarFirmaElectronica; render(); };
 
 function renderView() {
@@ -1615,20 +1617,21 @@ function viewInforme() {
   // las que quedaron pendientes/sin llenar se excluyen automáticamente.
   const validadas = orden.detalle.filter(d => d.estado === 'validada');
   const porCategoria = groupByCat(validadas);
-  const folioFechaQR = `
+  const folioFecha = `
     <div class="refbox">Folio #${String(orden.id).padStart(4,'0')}</div>
     <div class="refbox">${new Date(orden.fecha).toLocaleDateString()}</div>
-    ${orden.codigo_verificacion ? `
-    <div style="margin-top:6px;">
+  `;
+  const qrBlock = orden.codigo_verificacion ? `
+    <div style="text-align:center;">
       ${qrTag(window.location.origin + window.location.pathname + '?verificar=' + orden.codigo_verificacion, 3)}
       <div class="refbox">Verificar autenticidad</div>
-    </div>` : ''}
-  `;
+    </div>` : '<div></div>';
+  const espacioCm = laboratorio.espacio_membretado != null ? laboratorio.espacio_membretado : 3;
   const encabezadoInforme = modoMembretado ? `
-    <div style="height:${laboratorio.espacio_membretado != null ? laboratorio.espacio_membretado : 3}cm;"></div>
+    ${membretadoAlcance === 'primera' ? `<div style="height:${espacioCm}cm;"></div>` : ''}
     <div class="informe-header">
       <div class="refbox">Informe de resultados</div>
-      <div style="text-align:right">${folioFechaQR}</div>
+      <div style="text-align:right">${folioFecha}</div>
     </div>
   ` : `
     <div class="informe-header">
@@ -1639,15 +1642,27 @@ function viewInforme() {
         ${(laboratorio.telefono || laboratorio.correo) ? '<div class="refbox">'+[laboratorio.telefono, laboratorio.correo].filter(Boolean).join(' · ')+'</div>' : ''}
         ${laboratorio.horario ? '<div class="refbox">'+laboratorio.horario+'</div>' : ''}
       </div>
-      <div style="text-align:right">${folioFechaQR}</div>
+      <div style="text-align:right">${folioFecha}</div>
     </div>
   `;
   return `
+    ${modoMembretado && membretadoAlcance === 'todas' ? `<style>@media print { @page { margin-top: ${espacioCm}cm; } }</style>` : ''}
     <span class="backlink no-print" onclick="labsysSetView('informe')">&larr; Volver</span>
     <label class="no-print" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:600;cursor:pointer;">
       <input type="checkbox" id="chk-membretado" style="width:auto;margin:0;" ${modoMembretado ? 'checked' : ''} onchange="labsysToggleMembretado()">
       Imprimir en hoja membretada
     </label>
+    ${modoMembretado ? `
+    <div class="no-print" style="display:flex;gap:16px;margin:-4px 0 10px 26px;font-size:13px;color:var(--muted);">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
+        <input type="radio" name="membretado-alcance" style="width:auto;margin:0;" ${membretadoAlcance==='todas'?'checked':''} onchange="labsysSetMembretadoAlcance('todas')"> Todas las hojas
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400;">
+        <input type="radio" name="membretado-alcance" style="width:auto;margin:0;" ${membretadoAlcance==='primera'?'checked':''} onchange="labsysSetMembretadoAlcance('primera')"> Solo la primera hoja
+      </label>
+    </div>
+    ${membretadoAlcance === 'todas' ? '<p class="refbox no-print" style="margin:-4px 0 10px 26px;">El espacio en blanco solo se ve reflejado al imprimir o generar el PDF, no en esta vista previa.</p>' : ''}
+    ` : ''}
     <label class="no-print" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:600;${laboratorio.firma ? 'cursor:pointer;' : 'opacity:.5;cursor:not-allowed;'}">
       <input type="checkbox" id="chk-firma-electronica" style="width:auto;margin:0;" ${usarFirmaElectronica ? 'checked' : ''} ${laboratorio.firma ? '' : 'disabled'} onchange="labsysToggleFirmaElectronica()">
       Usar firma electrónica${laboratorio.firma ? '' : ' (sube una imagen en Configuración → Laboratorio)'}
@@ -1669,14 +1684,17 @@ function viewInforme() {
       `).join('')}
       <p class="refbox" style="margin-top:20px;">Validado por: ${validadas[0] ? validadas[0].validado_por : '—'} &nbsp;·&nbsp; ${orden.fecha_validacion ? new Date(orden.fecha_validacion).toLocaleString() : ''}</p>
       ${orden.estado === 'anulada' ? `<p class="refbox oor" style="font-weight:600;">Anulado por: ${orden.anulada_por || '—'} · ${orden.fecha_anulacion ? new Date(orden.fecha_anulacion).toLocaleString() : ''}${orden.motivo_anulacion ? ' · Motivo: '+orden.motivo_anulacion : ''}</p>` : ''}
-      <div class="firma-block">
-        ${usarFirmaElectronica && laboratorio.firma ? `
-        <img src="${laboratorio.firma}" alt="Firma y sello" style="max-height:90px;max-width:220px;display:block;margin:0 auto;">
-        ` : `
-        <div class="firma-linea"></div>
-        <div class="refbox">Firma y sello</div>
-        <div class="refbox" style="font-weight:600;color:var(--text);">${laboratorio.responsable || 'Química bióloga'}</div>
-        `}
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px;">
+        ${qrBlock}
+        <div class="firma-block" style="margin:0;">
+          ${usarFirmaElectronica && laboratorio.firma ? `
+          <img src="${laboratorio.firma}" alt="Firma y sello" style="max-height:90px;max-width:220px;display:block;margin:0 auto;">
+          ` : `
+          <div class="firma-linea"></div>
+          <div class="refbox">Firma y sello</div>
+          <div class="refbox" style="font-weight:600;color:var(--text);">${laboratorio.responsable || 'Química bióloga'}</div>
+          `}
+        </div>
       </div>
       <div class="no-print" style="margin-top:14px;">
         <button class="btn" onclick="window.print()">Imprimir / PDF</button>
