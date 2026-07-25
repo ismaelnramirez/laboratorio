@@ -117,6 +117,11 @@
 #labsys-root .refbox { font-size: 12px; color: var(--muted); margin-top: 2px; }
 #labsys-root .oor { color: var(--danger); font-weight: 600; }
 #labsys-root .nota-especial { color: var(--danger); font-weight: 700; font-size: 12px; margin-top: 2px; }
+#labsys-root .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--primary-light); color: var(--primary-dark); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 12px; font-weight: 600; margin: 3px 6px 3px 0; }
+#labsys-root .chip button { background: none; border: none; cursor: pointer; color: var(--primary-dark); font-size: 15px; line-height: 1; padding: 2px 6px; border-radius: 50%; }
+#labsys-root .chip button:hover { background: rgba(0,0,0,.08); }
+#labsys-root .chips-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-height: 44px; margin-bottom: 8px; }
+#labsys-root .chips-empty { color: var(--muted); font-size: 12px; }
 #labsys-root .backlink { font-size: 12px; color: var(--primary); cursor: pointer; margin-bottom: 14px; display: inline-block; }
 .toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary-dark, #085041); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 999; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
 #labsys-root .banner { background: var(--amber-light); color: var(--amber); border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 18px; }
@@ -270,7 +275,11 @@ const NOTAS_ESPECIALES = {
 function notaEspecialPrueba(p) {
   return NOTAS_ESPECIALES[(p.nombre || '').trim().toUpperCase()] || null;
 }
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 function sugerenciasParaPrueba(p) {
+  if (p.sugerencias && p.sugerencias.length) return p.sugerencias;
   const cat = CATEGORIAS.find(c => c.id === p.categoria_id);
   const catKey = (cat ? cat.nombre : '').trim().toUpperCase();
   const grupo = SUGERENCIAS_TEXTO[catKey];
@@ -398,7 +407,7 @@ async function fetchTodo() {
   CATEGORIAS = cat.data || [];
   PRUEBAS = (pru.data || []).map(p => ({
     id: p.id, categoria_id: p.categoria_id, nombre: p.nombre, unidad: p.unidad, tipo: p.tipo, activo: p.activo,
-    opciones: p.opciones || null, subgrupo: p.subgrupo || null,
+    opciones: p.opciones || null, subgrupo: p.subgrupo || null, sugerencias: p.sugerencias || null,
     ref: (p.valores_referencia || []).map(r => ({
       sexo: r.sexo, min: r.valor_min ?? undefined, max: r.valor_max ?? undefined,
       texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined
@@ -1152,6 +1161,7 @@ function viewCatalogoForm() {
   const refA = p ? p.ref.find(r => r.sexo === 'A') : null;
   const distintoSexo = !!(refM || refF);
   const base = distintoSexo ? null : refA;
+  const sugerenciasIniciales = p ? (sugerenciasParaPrueba(p) || []) : [];
   return `
     <span class="backlink" onclick="labsysCatalogo()">&larr; Volver al catálogo</span>
     <h1>${esNueva ? 'Agregar prueba nueva' : 'Editar prueba'}</h1>
@@ -1159,6 +1169,7 @@ function viewCatalogoForm() {
     <div class="card">
       <form id="form-prueba">
         <input type="hidden" name="id" value="${esNueva ? '' : p.id}">
+        <input type="hidden" id="prueba-sugerencias-data" value="${escapeAttr(JSON.stringify(sugerenciasIniciales))}">
         <div class="row">
           <div style="flex:2">
             <label>Categoría</label>
@@ -1179,6 +1190,15 @@ function viewCatalogoForm() {
           <option value="cualitativo" ${p && p.tipo==='cualitativo'?'selected':''}>Cualitativo (ej. Negativo/Positivo)</option>
           <option value="texto" ${p && p.tipo==='texto'?'selected':''}>Texto libre (sin rango)</option>
         </select>
+
+        <div id="prueba-sugerencias-block" style="margin-top:10px;${p && p.tipo==='numerico' ? 'display:none;' : ''}">
+          <label>Sugerencias de respuesta (aparecen como opciones rápidas al capturar resultados; no limitan lo que se puede escribir)</label>
+          <div class="chips-box" id="sugerencias-chips"></div>
+          <div class="row" style="align-items:flex-end;">
+            <div style="flex:1;"><input type="text" id="sugerencia-nueva" placeholder="Escribe una sugerencia y presiona Enter o Agregar"></div>
+            <div><button type="button" class="btn small secondary" id="btn-agregar-sugerencia">Agregar</button></div>
+          </div>
+        </div>
 
         <div id="prueba-ref-block" style="margin-top:10px;">
           <label style="display:flex;align-items:center;gap:8px;">
@@ -2169,6 +2189,48 @@ function attachHandlers() {
     document.getElementById('ref-doble').style.display = chkSexo.checked ? 'block' : 'none';
   });
 
+  const sugData = document.getElementById('prueba-sugerencias-data');
+  if (sugData) {
+    let sugerenciasTemp = [];
+    try { sugerenciasTemp = JSON.parse(sugData.value) || []; } catch { sugerenciasTemp = []; }
+    const chipsBox = document.getElementById('sugerencias-chips');
+    const pintarChips = () => {
+      sugData.value = JSON.stringify(sugerenciasTemp);
+      chipsBox.innerHTML = sugerenciasTemp.length
+        ? sugerenciasTemp.map((s, i) => `<span class="chip">${s.replace(/</g,'&lt;')}<button type="button" data-quitar-sugerencia="${i}" title="Quitar">&times;</button></span>`).join('')
+        : '<span class="chips-empty">Todavía no hay sugerencias para esta prueba.</span>';
+      chipsBox.querySelectorAll('[data-quitar-sugerencia]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          sugerenciasTemp.splice(Number(btn.dataset.quitarSugerencia), 1);
+          pintarChips();
+        });
+      });
+    };
+    pintarChips();
+
+    const inputNueva = document.getElementById('sugerencia-nueva');
+    const agregarSugerencia = () => {
+      const val = inputNueva.value.trim();
+      if (!val) return;
+      if (sugerenciasTemp.some(s => s.toLowerCase() === val.toLowerCase())) { toast('Esa sugerencia ya está agregada'); return; }
+      sugerenciasTemp.push(val);
+      inputNueva.value = '';
+      pintarChips();
+      inputNueva.focus();
+    };
+    const btnAgregarSugerencia = document.getElementById('btn-agregar-sugerencia');
+    if (btnAgregarSugerencia) btnAgregarSugerencia.addEventListener('click', agregarSugerencia);
+    if (inputNueva) inputNueva.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); agregarSugerencia(); }
+    });
+
+    const selTipoSug = document.getElementById('prueba-tipo');
+    const bloqueSug = document.getElementById('prueba-sugerencias-block');
+    if (selTipoSug && bloqueSug) selTipoSug.addEventListener('change', () => {
+      bloqueSug.style.display = selTipoSug.value === 'numerico' ? 'none' : 'block';
+    });
+  }
+
   const fpr = document.getElementById('form-prueba');
   if (fpr) fpr.addEventListener('submit', async e => {
     e.preventDefault();
@@ -2201,14 +2263,18 @@ function attachHandlers() {
     }
 
     const idField = fd.get('id');
+    const sugData2 = document.getElementById('prueba-sugerencias-data');
+    let sugerenciasGuardar = [];
+    if (sugData2) { try { sugerenciasGuardar = JSON.parse(sugData2.value) || []; } catch { sugerenciasGuardar = []; } }
+    if (tipo === 'numerico') sugerenciasGuardar = [];
     let pruebaId;
     if (idField) {
       pruebaId = Number(idField);
-      const { error } = await supabase.from('pruebas').update({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo }).eq('id', pruebaId);
+      const { error } = await supabase.from('pruebas').update({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null }).eq('id', pruebaId);
       if (error) { toast('Error: ' + error.message); return; }
       await supabase.from('valores_referencia').delete().eq('prueba_id', pruebaId);
     } else {
-      const { data, error } = await supabase.from('pruebas').insert({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true }).select().single();
+      const { data, error } = await supabase.from('pruebas').insert({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null }).select().single();
       if (error) { toast('Error: ' + error.message); return; }
       pruebaId = data.id;
     }
@@ -2222,7 +2288,7 @@ function attachHandlers() {
       texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined
     }));
     const idx = PRUEBAS.findIndex(p => p.id === pruebaId);
-    const pruebaObj = { id: pruebaId, categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true, ref: mappedRef };
+    const pruebaObj = { id: pruebaId, categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true, ref: mappedRef, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null };
     if (idx >= 0) PRUEBAS[idx] = { ...PRUEBAS[idx], ...pruebaObj }; else PRUEBAS.push(pruebaObj);
     toast(idField ? 'Prueba actualizada' : 'Prueba agregada al catálogo');
     logAccion(idField ? 'Editó prueba del catálogo' : 'Agregó prueba al catálogo', pruebaObj.nombre);
