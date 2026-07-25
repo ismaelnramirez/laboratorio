@@ -215,7 +215,7 @@
 @media (max-width: 640px) { #labsys-root .user-chip-info { display: none; } }
 #labsys-root .nav { display: flex; flex-direction: column; }
 @media print {
-  @page { margin: 10mm; }
+  @page { margin: 10mm; margin-top: var(--membrete-top, 10mm); }
   html, body { height: auto; margin: 0; }
   #labsys-root { min-height: 0; display: block; }
   #labsys-root .nav, #labsys-root .no-print { display: none !important; }
@@ -774,8 +774,16 @@ function renderLogin() {
 }
 
 window.labsysLogout = async function() { await supabase.auth.signOut(); sesion = null; render(); };
-window.labsysToggleMembretado = function() { modoMembretado = !modoMembretado; render(); };
-window.labsysSetMembretadoAlcance = function(v) { membretadoAlcance = v; render(); };
+function actualizarMargenMembretado() {
+  const espacioCm = laboratorio.espacio_membretado != null ? laboratorio.espacio_membretado : 3;
+  if (modoMembretado && membretadoAlcance === 'todas') {
+    document.documentElement.style.setProperty('--membrete-top', `calc(${espacioCm}cm + 10mm)`);
+  } else {
+    document.documentElement.style.removeProperty('--membrete-top');
+  }
+}
+window.labsysToggleMembretado = function() { modoMembretado = !modoMembretado; actualizarMargenMembretado(); render(); };
+window.labsysSetMembretadoAlcance = function(v) { membretadoAlcance = v; actualizarMargenMembretado(); render(); };
 window.labsysToggleFirmaElectronica = function() { usarFirmaElectronica = !usarFirmaElectronica; render(); };
 
 function renderView() {
@@ -1646,7 +1654,6 @@ function viewInforme() {
     </div>
   `;
   return `
-    ${modoMembretado && membretadoAlcance === 'todas' ? `<style>@media print { @page { margin-top: ${espacioCm}cm; } }</style>` : ''}
     <span class="backlink no-print" onclick="labsysSetView('informe')">&larr; Volver</span>
     <label class="no-print" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:600;cursor:pointer;">
       <input type="checkbox" id="chk-membretado" style="width:auto;margin:0;" ${modoMembretado ? 'checked' : ''} onchange="labsysToggleMembretado()">
