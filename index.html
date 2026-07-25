@@ -125,6 +125,8 @@
 #labsys-root mark { background: #fff176; color: #1a1a1a; padding: 0 2px; border-radius: 3px; }
 #labsys-root details.catgroup-catalogo { margin-bottom: 12px; }
 #labsys-root details.catgroup-catalogo table { width: calc(100% - 28px); margin: 4px 14px 14px; }
+#labsys-root .dup-suggest-item { border-radius: 8px; }
+#labsys-root .dup-suggest-item:hover { background: var(--primary-light); }
 #labsys-root .backlink { font-size: 12px; color: var(--primary); cursor: pointer; margin-bottom: 14px; display: inline-block; }
 .toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary-dark, #085041); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 999; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
 #labsys-root .banner { background: var(--amber-light); color: var(--amber); border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 18px; }
@@ -805,9 +807,10 @@ function viewPacientes() {
       <form id="form-paciente">
         <input type="hidden" name="id" value="${editando ? editando.id : ''}">
         <div class="row">
-          <div><label>Nombres</label><input type="text" name="nombres" required value="${editando ? editando.nombres : ''}"></div>
-          <div><label>Apellidos</label><input type="text" name="apellidos" required value="${editando ? editando.apellidos : ''}"></div>
+          <div><label>Nombres</label><input type="text" id="pac-nombres" name="nombres" required value="${editando ? editando.nombres : ''}" autocomplete="off"></div>
+          <div><label>Apellidos</label><input type="text" id="pac-apellidos" name="apellidos" required value="${editando ? editando.apellidos : ''}" autocomplete="off"></div>
         </div>
+        <div id="sugerencias-duplicados" class="chips-box no-print" style="display:none;margin:-4px 0 14px;"></div>
         <div class="row">
           <div><label>Fecha de nacimiento</label><input type="date" name="fnac" required value="${editando ? editando.fnac : ''}"></div>
           <div><label>Sexo</label><select name="sexo">
@@ -2399,6 +2402,50 @@ function attachHandlers() {
     };
     if (fnacInput) fnacInput.addEventListener('change', actualizarDpiRequerido);
     actualizarDpiRequerido();
+
+    const editandoIdActual = ctxPacienteEdit;
+    const inputNombresPac = document.getElementById('pac-nombres');
+    const inputApellidosPac = document.getElementById('pac-apellidos');
+    const cajaDuplicados = document.getElementById('sugerencias-duplicados');
+    const revisarDuplicados = () => {
+      if (!cajaDuplicados) return;
+      const nom = (inputNombresPac.value || '').trim();
+      const ape = (inputApellidosPac.value || '').trim();
+      const palabras = normalizar((nom + ' ' + ape).trim()).split(/\s+/).filter(Boolean);
+      if (palabras.length === 0 || (nom.length < 2 && ape.length < 2)) {
+        cajaDuplicados.style.display = 'none';
+        cajaDuplicados.innerHTML = '';
+        return;
+      }
+      const coincidencias = pacientes.filter(p => {
+        if (editandoIdActual && p.id === editandoIdActual) return false;
+        const nombreCompleto = normalizar(p.nombres + ' ' + p.apellidos);
+        return palabras.every(w => nombreCompleto.includes(w));
+      });
+      if (coincidencias.length === 0) {
+        cajaDuplicados.style.display = 'none';
+        cajaDuplicados.innerHTML = '';
+        return;
+      }
+      cajaDuplicados.style.display = 'block';
+      cajaDuplicados.innerHTML = `
+        <div class="refbox" style="margin-bottom:6px;font-weight:600;">⚠️ Ya existe(n) ${coincidencias.length} paciente(s) parecido(s) — clic para usarlo en una nueva orden:</div>
+        ${coincidencias.map(p => `
+          <div class="testrow dup-suggest-item" data-usar-paciente="${p.id}" style="cursor:pointer;">
+            <div style="flex:1;">
+              <strong>${p.nombres} ${p.apellidos}</strong>
+              <span class="refbox">${edad(p.fnac)} años · ${p.telefono || 'sin teléfono'}</span>
+            </div>
+          </div>`).join('')}
+      `;
+      cajaDuplicados.querySelectorAll('[data-usar-paciente]').forEach(el => {
+        el.addEventListener('click', () => {
+          setView('nueva-orden', Number(el.dataset.usarPaciente));
+        });
+      });
+    };
+    if (inputNombresPac) inputNombresPac.addEventListener('input', revisarDuplicados);
+    if (inputApellidosPac) inputApellidosPac.addEventListener('input', revisarDuplicados);
   }
   if (fp) fp.addEventListener('submit', async e => {
     e.preventDefault();
