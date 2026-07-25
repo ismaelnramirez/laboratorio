@@ -116,6 +116,7 @@
 #labsys-root .testrow label { margin: 0; color: var(--text); font-size: 13px; display: inline; }
 #labsys-root .refbox { font-size: 12px; color: var(--muted); margin-top: 2px; }
 #labsys-root .oor { color: var(--danger); font-weight: 600; }
+#labsys-root .nota-especial { color: var(--danger); font-weight: 700; font-size: 12px; margin-top: 2px; }
 #labsys-root .backlink { font-size: 12px; color: var(--primary); cursor: pointer; margin-bottom: 14px; display: inline-block; }
 .toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary-dark, #085041); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 999; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
 #labsys-root .banner { background: var(--amber-light); color: var(--amber); border-radius: 8px; padding: 10px 14px; font-size: 12px; margin-bottom: 18px; }
@@ -261,6 +262,14 @@ const SUGERENCIAS_TEXTO = {
     'CILINDROS': ['NO SE OBSERVÓ', 'ESCASA CANTIDAD', 'ABUNDANTE CANTIDAD']
   }
 };
+// Notas automáticas en rojo que se muestran junto al resultado de ciertas pruebas
+// (para agregar otra, añade otra línea con el nombre EXACTO de la prueba en mayúsculas).
+const NOTAS_ESPECIALES = {
+  'HCG BETA CUALITATIVA': 'PRUEBA REALIZADA EN SANGRE'
+};
+function notaEspecialPrueba(p) {
+  return NOTAS_ESPECIALES[(p.nombre || '').trim().toUpperCase()] || null;
+}
 function sugerenciasParaPrueba(p) {
   const cat = CATEGORIAS.find(c => c.id === p.categoria_id);
   const catKey = (cat ? cat.nombre : '').trim().toUpperCase();
@@ -1385,7 +1394,7 @@ function viewCaptura() {
                 }
               }
               return `<tr>
-                <td>${p.nombre}</td>
+                <td>${p.nombre}${notaEspecialPrueba(p) ? '<div class="nota-especial">'+notaEspecialPrueba(p)+'</div>' : ''}</td>
                 <td>${inputHtml} ${p.unidad ? '<span class="refbox">'+p.unidad+'</span>' : ''}
                   ${d.fuera_de_rango ? '<div class="refbox oor">⚠️ fuera de rango</div>' : ''}</td>
                 <td><input type="text" class="cap-nota" data-id="${d.prueba_id}" value="${d.observaciones ?? ''}" placeholder="Opcional" ${d.estado==='validada'?'disabled':''}></td>
@@ -1430,7 +1439,7 @@ function viewCapturaPDF() {
             const p = pruebaById(d.prueba_id);
             const ref = refFor(p, pac);
             const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
-            return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td><td style="white-space:pre-line;" class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
+            return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}${notaEspecialPrueba(p) ? '<div class="nota-especial">'+notaEspecialPrueba(p)+'</div>' : ''}</td><td style="white-space:pre-line;" class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
           }).join('')).join('')}
         </tbody></table>
       `).join('')}
@@ -1483,7 +1492,7 @@ function viewValidacion() {
               const ref = refFor(p, pac);
               const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
               return `<tr>
-                <td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td>
+                <td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}${notaEspecialPrueba(p) ? '<div class="nota-especial">'+notaEspecialPrueba(p)+'</div>' : ''}</td>
                 <td class="${d.fuera_de_rango ? 'oor' : ''}" style="white-space:pre-line;">${val}${d.fuera_de_rango ? ' <span class="oor">⚠️ fuera de rango</span>' : ''}</td>
                 <td class="refbox">${p.unidad || '—'}</td>
                 <td class="refbox">${refTexto(ref)}</td>
@@ -1556,7 +1565,7 @@ function viewInforme() {
             const p = pruebaById(d.prueba_id);
             const ref = refFor(p, pac);
             const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
-            return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}</td><td style="white-space:pre-line;" class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
+            return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}${notaEspecialPrueba(p) ? '<div class="nota-especial">'+notaEspecialPrueba(p)+'</div>' : ''}</td><td style="white-space:pre-line;" class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
           }).join('')).join('')}
         </tbody></table>
       `).join('')}
