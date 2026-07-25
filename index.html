@@ -295,6 +295,7 @@ let reporteFiltro = { modo: 'general', anio: '', mes: '', desde: '', hasta: '' }
 let sesion = null;
 let loginError = '';
 let mostrarSignup = false;
+let modoMembretado = false; // checkbox "Imprimir en hoja membretada" en Informe / entrega
 
 const PERMISOS = {
   pacientes: ['secretaria','administrador'],
@@ -733,6 +734,7 @@ function renderLogin() {
 }
 
 window.labsysLogout = async function() { await supabase.auth.signOut(); sesion = null; render(); };
+window.labsysToggleMembretado = function() { modoMembretado = !modoMembretado; render(); };
 
 function renderView() {
   if (!puedeVer(view)) return '<div class="card"><div class="empty">No tienes permiso para ver esta sección.</div></div>';
@@ -899,6 +901,9 @@ function viewLaboratorio() {
         <input type="text" name="horario" value="${l.horario || ''}" placeholder="Lunes a viernes 7:00-17:00 · Sábados 7:00-12:00">
         <label>Química bióloga (para la firma del informe)</label>
         <input type="text" name="responsable" value="${l.responsable || ''}" placeholder="Nombre — Colegiado 0000">
+        <label>Espacio en blanco superior para hoja membretada (cm)</label>
+        <input type="number" name="espacio_membretado" step="0.1" min="0" value="${l.espacio_membretado ?? 3}" placeholder="3">
+        <p class="refbox">Se usa cuando marcas "Imprimir en hoja membretada" en la pantalla de Informe / entrega — deja este espacio en blanco arriba para tu papel ya impreso con el membrete.</p>
         <label>Logo del laboratorio</label>
         ${l.logo ? `<div style="margin-bottom:8px;"><img src="${l.logo}" alt="Logo actual" style="max-height:140px;max-width:140px;display:block;border:1px solid var(--border);border-radius:6px;padding:6px;"></div>` : ''}
         <input type="file" id="logo-input" accept="image/*">
@@ -1535,28 +1540,42 @@ function viewInforme() {
   // las que quedaron pendientes/sin llenar se excluyen automáticamente.
   const validadas = orden.detalle.filter(d => d.estado === 'validada');
   const porCategoria = groupByCat(validadas);
+  const folioFechaQR = `
+    <div class="refbox">Folio #${String(orden.id).padStart(4,'0')}</div>
+    <div class="refbox">${new Date(orden.fecha).toLocaleDateString()}</div>
+    ${orden.codigo_verificacion ? `
+    <div style="margin-top:6px;">
+      ${qrTag(window.location.origin + window.location.pathname + '?verificar=' + orden.codigo_verificacion, 3)}
+      <div class="refbox">Verificar autenticidad</div>
+    </div>` : ''}
+  `;
+  const encabezadoInforme = modoMembretado ? `
+    <div style="height:${laboratorio.espacio_membretado != null ? laboratorio.espacio_membretado : 3}cm;"></div>
+    <div class="informe-header">
+      <div class="refbox">Informe de resultados</div>
+      <div style="text-align:right">${folioFechaQR}</div>
+    </div>
+  ` : `
+    <div class="informe-header">
+      <div>
+        ${laboratorio.logo ? '<img src="'+laboratorio.logo+'" alt="Logo" style="max-height:130px;max-width:130px;display:block;margin-bottom:8px;">' : ''}
+        <strong>${laboratorio.nombre || 'LabSys'}</strong><div class="refbox">Informe de resultados</div>
+        ${laboratorio.direccion ? '<div class="refbox">'+laboratorio.direccion+'</div>' : ''}
+        ${(laboratorio.telefono || laboratorio.correo) ? '<div class="refbox">'+[laboratorio.telefono, laboratorio.correo].filter(Boolean).join(' · ')+'</div>' : ''}
+        ${laboratorio.horario ? '<div class="refbox">'+laboratorio.horario+'</div>' : ''}
+      </div>
+      <div style="text-align:right">${folioFechaQR}</div>
+    </div>
+  `;
   return `
     <span class="backlink no-print" onclick="labsysSetView('informe')">&larr; Volver</span>
+    <label class="no-print" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:600;cursor:pointer;">
+      <input type="checkbox" id="chk-membretado" style="width:auto;margin:0;" ${modoMembretado ? 'checked' : ''} onchange="labsysToggleMembretado()">
+      Imprimir en hoja membretada
+    </label>
     <div class="card" style="position:relative;overflow:hidden;">
       ${orden.estado === 'anulada' ? '<div class="watermark-anulado">ANULADO</div>' : ''}
-      <div class="informe-header">
-        <div>
-          ${laboratorio.logo ? '<img src="'+laboratorio.logo+'" alt="Logo" style="max-height:130px;max-width:130px;display:block;margin-bottom:8px;">' : ''}
-          <strong>${laboratorio.nombre || 'LabSys'}</strong><div class="refbox">Informe de resultados</div>
-          ${laboratorio.direccion ? '<div class="refbox">'+laboratorio.direccion+'</div>' : ''}
-          ${(laboratorio.telefono || laboratorio.correo) ? '<div class="refbox">'+[laboratorio.telefono, laboratorio.correo].filter(Boolean).join(' · ')+'</div>' : ''}
-          ${laboratorio.horario ? '<div class="refbox">'+laboratorio.horario+'</div>' : ''}
-        </div>
-        <div style="text-align:right">
-          <div class="refbox">Folio #${String(orden.id).padStart(4,'0')}</div>
-          <div class="refbox">${new Date(orden.fecha).toLocaleDateString()}</div>
-          ${orden.codigo_verificacion ? `
-          <div style="margin-top:6px;">
-            ${qrTag(window.location.origin + window.location.pathname + '?verificar=' + orden.codigo_verificacion, 3)}
-            <div class="refbox">Verificar autenticidad</div>
-          </div>` : ''}
-        </div>
-      </div>
+      ${encabezadoInforme}
       <p><strong>${pac.nombres} ${pac.apellidos}</strong> · ${edadTexto(pac.fnac)} · ${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}${orden.medico ? ' · Ref: '+orden.medico : ''}</p>
       ${porCategoria.length === 0 ? '<div class="empty">Ningún resultado validado todavía.</div>' : porCategoria.map(g => `
         <div class="informe-cat">${g.cat.nombre}</div>
@@ -2312,7 +2331,8 @@ function attachHandlers() {
     const fd = new FormData(fl);
     const patch = { nombre: fd.get('nombre'), direccion: fd.get('direccion'), nit: fd.get('nit'),
       telefono: fd.get('telefono'), correo: fd.get('correo'), sitio_web: fd.get('sitio_web'),
-      horario: fd.get('horario'), responsable: fd.get('responsable') };
+      horario: fd.get('horario'), responsable: fd.get('responsable'),
+      espacio_membretado: fd.get('espacio_membretado') ? parseFloat(fd.get('espacio_membretado')) : 3 };
 
     const logoInput = document.getElementById('logo-input');
     const logoQuitar = document.getElementById('logo-quitar');
