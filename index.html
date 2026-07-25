@@ -326,7 +326,15 @@ const PERMISOS = {
   bitacora: ['administrador'],
   'mi-cuenta': ['secretaria','quimico','contador','tecnico','administrador']
 };
-function puedeVer(v) { return sesion && (sesion.rol === 'administrador' || !PERMISOS[v] || PERMISOS[v].includes(sesion.rol)); }
+function puedeVer(v) { return sesion && (sesion.rol === 'administrador' || !PERMISOS[v] || PERMISOS[v].includes(sesion.rol) || (sesion.permisos_extra || []).includes(v)); }
+// Secciones que se pueden asignar de forma individual a un usuario (permiso extra, aparte de su rol)
+const SECCIONES_ASIGNABLES = [
+  ['pacientes','Pacientes'], ['nueva-orden','Nueva orden'], ['captura','Captura'],
+  ['validacion','Validación'], ['informe','Informe / entrega'], ['ordenes','Órdenes'],
+  ['medicos','Médicos'], ['pedidos','Pedido de insumos'], ['historial-pedidos','Historial de pedidos'],
+  ['reportes','Reportes'], ['catalogo','Catálogo de pruebas'], ['catalogo-insumos','Catálogo de insumos'],
+  ['laboratorio','Laboratorio'], ['usuarios','Usuarios'], ['bitacora','Bitácora']
+];
 function vistaInicial() {
   if (!sesion) return 'pacientes';
   if (sesion.rol === 'administrador' || sesion.rol === 'secretaria') return 'pacientes';
@@ -386,7 +394,7 @@ async function onAuthed(user) {
   const { data: perfil, error } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
   if (error || !perfil) { loginError = 'No se encontró tu perfil. Contacta al administrador.'; await supabase.auth.signOut(); render(); return; }
   if (perfil.activo === false) { loginError = 'Tu cuenta está desactivada. Contacta al administrador.'; await supabase.auth.signOut(); render(); return; }
-  sesion = { id: perfil.id, nombre: perfil.nombre, correo: perfil.correo, rol: perfil.rol };
+  sesion = { id: perfil.id, nombre: perfil.nombre, correo: perfil.correo, rol: perfil.rol, permisos_extra: perfil.permisos_extra || [] };
   loginError = '';
   await fetchTodo();
   view = vistaInicial();
@@ -931,7 +939,7 @@ function viewUsuarios() {
     <div class="card">
       <h2>Listado (${usuarios.length})</h2>
       ${usuarios.length === 0 ? '<div class="empty">Todavía no hay cuentas registradas.</div>' : `
-      <table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead><tbody>
+      <table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Permisos extra</th><th>Estado</th><th></th></tr></thead><tbody>
         ${usuarios.map(u => `
           <tr>
             <td style="white-space:nowrap;">
@@ -947,6 +955,19 @@ function viewUsuarios() {
                 <option value="tecnico" ${u.rol==='tecnico'?'selected':''}>Técnico</option>
                 <option value="administrador" ${u.rol==='administrador'?'selected':''}>Administrador</option>
               </select>
+            </td>
+            <td>
+              <details class="permisos-extra-details">
+                <summary class="refbox" style="cursor:pointer;">${(u.permisos_extra||[]).length ? (u.permisos_extra.length+' asignado(s)') : 'Ninguno'} — gestionar</summary>
+                <div style="margin-top:8px;max-width:260px;">
+                  ${SECCIONES_ASIGNABLES.map(([id,label]) => `
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin-bottom:4px;">
+                      <input type="checkbox" style="width:auto;margin:0;" data-permiso-extra="${u.id}" value="${id}" ${(u.permisos_extra||[]).includes(id)?'checked':''} ${PERMISOS[id] && PERMISOS[id].includes(u.rol) ? 'disabled title="Su rol ya incluye esta sección"' : ''}>
+                      ${label}
+                    </label>`).join('')}
+                  <button type="button" class="btn small secondary" data-guardar-permisos="${u.id}" style="margin-top:6px;">Guardar permisos</button>
+                </div>
+              </details>
             </td>
             <td><span class="pill ${u.activo===false?'pendiente':'validada'}">${u.activo===false?'inactivo':'activo'}</span></td>
             <td><button class="btn small secondary" data-toggle-usuario="${u.id}" ${u.id===sesion.id?'disabled':''}>${u.activo===false?'Activar':'Desactivar'}</button></td>
@@ -2009,6 +2030,22 @@ function attachHandlers() {
       if (error) { toast('Error: ' + error.message); return; }
       u.activo = nuevo;
       logAccion(nuevo ? 'Activó usuario' : 'Desactivó usuario', u.correo);
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-guardar-permisos]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const uid = btn.dataset.guardarPermisos;
+      const checks = document.querySelectorAll(`[data-permiso-extra="${uid}"]`);
+      const seleccionados = Array.from(checks).filter(c => c.checked).map(c => c.value);
+      const { error } = await supabase.from('perfiles').update({ permisos_extra: seleccionados.length ? seleccionados : null }).eq('id', uid);
+      if (error) { toast('Error: ' + error.message); return; }
+      const u = usuarios.find(x => x.id === uid);
+      u.permisos_extra = seleccionados;
+      if (sesion.id === uid) sesion.permisos_extra = seleccionados;
+      logAccion('Actualizó permisos extra de usuario', u.correo + ' → ' + (seleccionados.join(', ') || 'ninguno'));
+      toast('Permisos actualizados');
       render();
     });
   });
