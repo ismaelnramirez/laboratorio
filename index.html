@@ -412,6 +412,12 @@ async function mostrarVerificacionPublica(codigo) {
           <tr><td class="refbox">Validado</td><td style="text-align:right;font-weight:600;">${resultado.fecha_validacion ? new Date(resultado.fecha_validacion).toLocaleString() : '—'}</td></tr>
         </tbody></table>
         <p class="refbox" style="margin-top:14px;">Este documento fue emitido y validado por el laboratorio. Este resumen no incluye resultados clínicos por privacidad del paciente.</p>
+        ${(resultado.telefono || resultado.correo) ? `
+        <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:12px;">
+          <p class="refbox" style="margin-bottom:6px;">Contacto del laboratorio</p>
+          ${resultado.telefono ? '<p style="margin:0 0 4px;font-size:13px;">'+resultado.telefono+'</p>' : ''}
+          ${resultado.correo ? '<p style="margin:0;font-size:13px;">'+resultado.correo+'</p>' : ''}
+        </div>` : ''}
       `}
     </div></div>
   `;
