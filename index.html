@@ -668,6 +668,10 @@ window.labsysToggleCat = function(catId) {
   const master = document.getElementById('catchk-'+catId);
   document.querySelectorAll('.chk-prueba-'+catId).forEach(c => c.checked = master.checked);
 };
+window.labsysToggleSubgrupo = function(catId, sgIdx) {
+  const master = document.getElementById('sgchk-'+catId+'-'+sgIdx);
+  document.querySelectorAll('.chk-sg-'+catId+'-'+sgIdx).forEach(c => c.checked = master.checked);
+};
 window.labsysCatalogo = function(pruebaId) {
   view = 'catalogo'; ctxPruebaId = pruebaId || null; render(); window.scrollTo(0,0);
 };
@@ -1343,11 +1347,15 @@ function viewNuevaOrden() {
               if (bloques.length === 0 || sg !== last) { bloques.push({ subgrupo: sg, items: [] }); last = sg; }
               bloques[bloques.length - 1].items.push(p);
             });
-            return bloques.map(b => `
-              ${b.subgrupo ? `<div class="testrow-subgrupo">${b.subgrupo}</div>` : ''}
+            return bloques.map((b, i) => `
+              ${b.subgrupo ? `
+              <div class="testrow-subgrupo" style="display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="sgchk-${c.id}-${i}" style="width:auto;margin:0;" onclick="labsysToggleSubgrupo(${c.id}, ${i})">
+                <label for="sgchk-${c.id}-${i}" style="cursor:pointer;text-transform:uppercase;">${b.subgrupo}</label>
+              </div>` : ''}
               ${b.items.map(p => `
                 <div class="testrow">
-                  <input type="checkbox" class="chk-prueba chk-prueba-${c.id}" value="${p.id}" id="chk-${p.id}">
+                  <input type="checkbox" class="chk-prueba chk-prueba-${c.id} chk-sg-${c.id}-${i}" value="${p.id}" id="chk-${p.id}">
                   <label for="chk-${p.id}">${p.nombre} ${p.unidad ? '<span class="refbox">('+p.unidad+')</span>' : ''}</label>
                 </div>`).join('')}
             `).join('');
