@@ -1660,6 +1660,7 @@ function viewInforme() {
         <strong>${laboratorio.nombre || 'LabSys'}</strong><div class="refbox">Informe de resultados</div>
         ${laboratorio.direccion ? '<div class="refbox">'+laboratorio.direccion+'</div>' : ''}
         ${(laboratorio.telefono || laboratorio.correo) ? '<div class="refbox">'+[laboratorio.telefono, laboratorio.correo].filter(Boolean).join(' · ')+'</div>' : ''}
+        ${laboratorio.sitio_web ? '<div class="refbox">'+laboratorio.sitio_web+'</div>' : ''}
         ${laboratorio.horario ? '<div class="refbox">'+laboratorio.horario+'</div>' : ''}
       </div>
       <div style="text-align:right">${folioFecha}</div>
@@ -1689,7 +1690,8 @@ function viewInforme() {
     <div class="card informe-bn" style="position:relative;overflow:hidden;">
       ${orden.estado === 'anulada' ? '<div class="watermark-anulado">ANULADO</div>' : ''}
       ${encabezadoInforme}
-      <p><strong>${pac.nombres} ${pac.apellidos}</strong> · ${edadTexto(pac.fnac)} · ${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}${orden.medico ? ' · Ref: '+orden.medico : ''}</p>
+      <p><strong>${pac.nombres} ${pac.apellidos}</strong> · ${edadTexto(pac.fnac)} · ${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}</p>
+      ${orden.medico ? '<p class="refbox" style="margin-top:-8px;">Médico que refiere: <strong style="color:inherit;">'+orden.medico+'</strong></p>' : ''}
       ${porCategoria.length === 0 ? '<div class="empty">Ningún resultado validado todavía.</div>' : porCategoria.map(g => `
         <div class="informe-cat">${g.cat.nombre}</div>
         <table class="informe-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th></tr></thead><tbody>
