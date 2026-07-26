@@ -326,6 +326,7 @@ let ctxOrdenId = null;
 let ctxPruebaId = null;
 let ctxPacienteEdit = null;
 let ctxMedicoEdit = null;
+let ctxEvolucionPrueba = null;
 let reporteFiltro = { modo: 'general', anio: '', mes: '', desde: '', hasta: '' };
 let sesion = null;
 let loginError = '';
@@ -665,6 +666,44 @@ function refTexto(r) {
 
 function pruebaById(id) { return PRUEBAS.find(p => p.id === id); }
 function pacienteById(id) { return pacientes.find(p => p.id === id); }
+// Pruebas que un paciente se ha hecho más de una vez (con resultado validado), para poder comparar en el tiempo
+function pruebasConHistorial(pacienteId) {
+  const mapa = new Map();
+  ordenes.filter(o => o.paciente_id === pacienteId).forEach(o => {
+    o.detalle.filter(d => d.estado === 'validada').forEach(d => {
+      if (!mapa.has(d.prueba_id)) mapa.set(d.prueba_id, []);
+      mapa.get(d.prueba_id).push({ fecha: o.fecha, d });
+    });
+  });
+  return Array.from(mapa.entries())
+    .filter(([, arr]) => arr.length > 1)
+    .map(([pruebaId, arr]) => ({ prueba: pruebaById(pruebaId), registros: arr.slice().sort((a, b) => new Date(a.fecha) - new Date(b.fecha)) }))
+    .filter(x => x.prueba)
+    .sort((a, b) => a.prueba.nombre.localeCompare(b.prueba.nombre));
+}
+// Dibuja una línea de tendencia simple en SVG (sin librerías externas), marcando en rojo los puntos fuera de rango
+function graficaEvolucion(puntos) {
+  const w = 600, h = 160, padL = 10, padR = 10, padT = 16, padB = 26;
+  const vals = puntos.map(p => p.valor).filter(v => !isNaN(v));
+  if (vals.length === 0) return '';
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const rango = (max - min) || 1;
+  const stepX = puntos.length > 1 ? (w - padL - padR) / (puntos.length - 1) : 0;
+  const coords = puntos.map((p, i) => ({
+    x: padL + stepX * i,
+    y: padT + (h - padT - padB) * (1 - (p.valor - min) / rango),
+    p
+  }));
+  const linea = coords.map((c, i) => (i === 0 ? 'M' : 'L') + c.x.toFixed(1) + ' ' + c.y.toFixed(1)).join(' ');
+  const puntosSVG = coords.map(c => `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4" fill="${c.p.fueraDeRango ? 'var(--danger)' : 'var(--primary-dark)'}"></circle>`).join('');
+  const etiquetas = coords.map(c => `<text x="${c.x.toFixed(1)}" y="${h-8}" font-size="10" text-anchor="middle" fill="var(--muted)">${new Date(c.p.fecha).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit' })}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;max-height:180px;margin-top:10px;">
+    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="var(--border)"></line>
+    <path d="${linea}" fill="none" stroke="var(--primary-dark)" stroke-width="2"></path>
+    ${puntosSVG}
+    ${etiquetas}
+  </svg>`;
+}
 function ordenById(id) { return ordenes.find(o => o.id === id); }
 function medicoById(id) { return medicos.find(m => m.id === id); }
 
@@ -675,6 +714,7 @@ window.labsysEditPaciente = function(id) { ctxPacienteEdit = id; view = 'pacient
 window.labsysCancelarEdicionPaciente = function() { ctxPacienteEdit = null; render(); };
 window.labsysEditMedico = function(id) { ctxMedicoEdit = id; render(); window.scrollTo(0,0); };
 window.labsysCancelarEdicionMedico = function() { ctxMedicoEdit = null; render(); };
+window.labsysVerEvolucion = function(pruebaId) { ctxEvolucionPrueba = Number(pruebaId); render(); };
 window.labsysSetView = setView;
 window.labsysToggleCat = function(catId) {
   const master = document.getElementById('catchk-'+catId);
@@ -915,6 +955,29 @@ function viewFichaPaciente() {
           </tr>`).join('')}
       </tbody></table>`}
     </div>
+    ${(() => {
+      const historial = pruebasConHistorial(pac.id);
+      if (historial.length === 0) return '';
+      const actual = historial.find(h => h.prueba.id === ctxEvolucionPrueba) || historial[0];
+      const esNumerico = actual.prueba.tipo === 'numerico';
+      return `
+      <div class="card">
+        <h2>Evolución de resultados</h2>
+        <label>Ver evolución de</label>
+        <select onchange="labsysVerEvolucion(this.value)">
+          ${historial.map(h => `<option value="${h.prueba.id}" ${h.prueba.id===actual.prueba.id?'selected':''}>${h.prueba.nombre}</option>`).join('')}
+        </select>
+        ${esNumerico ? graficaEvolucion(actual.registros.map(r => ({ fecha: r.fecha, valor: Number(r.d.valor_numerico), fueraDeRango: r.d.fuera_de_rango }))) : ''}
+        <table style="margin-top:10px;"><thead><tr><th>Fecha</th><th>${actual.prueba.nombre}</th><th>Estado</th></tr></thead><tbody>
+          ${actual.registros.map(r => `
+            <tr>
+              <td>${new Date(r.fecha).toLocaleDateString()}</td>
+              <td>${actual.prueba.tipo==='numerico' ? (r.d.valor_numerico + ' ' + (actual.prueba.unidad||'')) : (r.d.valor_texto||'—')}</td>
+              <td>${r.d.fuera_de_rango ? '<span class="oor">Fuera de rango</span>' : 'Normal'}</td>
+            </tr>`).join('')}
+        </tbody></table>
+      </div>`;
+    })()}
   `;
 }
 
