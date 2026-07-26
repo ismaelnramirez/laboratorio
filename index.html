@@ -222,6 +222,10 @@
   #labsys-root .main { max-width: 100%; padding: 0; margin: 0; }
   #labsys-root .card { page-break-inside: avoid; break-inside: avoid; margin-bottom: 0; box-shadow: none; border: none; }
   #labsys-root .firma-block { margin-top: 36px; }
+  #labsys-root .informe-bn, #labsys-root .informe-bn strong { color: #000; }
+  #labsys-root .informe-bn .refbox { color: #000; }
+  #labsys-root .informe-bn .informe-cat { color: #000; }
+  #labsys-root .informe-bn tr.subgrupo-row td { color: #000; background: transparent; }
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1682,7 +1686,7 @@ function viewInforme() {
       <input type="checkbox" id="chk-firma-electronica" style="width:auto;margin:0;" ${usarFirmaElectronica ? 'checked' : ''} ${laboratorio.firma ? '' : 'disabled'} onchange="labsysToggleFirmaElectronica()">
       Usar firma electrónica${laboratorio.firma ? '' : ' (sube una imagen en Configuración → Laboratorio)'}
     </label>
-    <div class="card" style="position:relative;overflow:hidden;">
+    <div class="card informe-bn" style="position:relative;overflow:hidden;">
       ${orden.estado === 'anulada' ? '<div class="watermark-anulado">ANULADO</div>' : ''}
       ${encabezadoInforme}
       <p><strong>${pac.nombres} ${pac.apellidos}</strong> · ${edadTexto(pac.fnac)} · ${pac.sexo === 'M' ? 'Masculino' : 'Femenino'}${orden.medico ? ' · Ref: '+orden.medico : ''}</p>
