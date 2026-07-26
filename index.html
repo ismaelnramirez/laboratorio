@@ -350,6 +350,7 @@ const PERMISOS = {
   pedidos: ['tecnico','administrador'],
   'historial-pedidos': ['tecnico','administrador'],
   laboratorio: ['administrador'],
+  respaldo: ['administrador'],
   usuarios: ['administrador'],
   bitacora: ['administrador'],
   'mi-cuenta': ['secretaria','quimico','contador','tecnico','administrador']
@@ -361,7 +362,7 @@ const SECCIONES_ASIGNABLES = [
   ['validacion','Validación'], ['informe','Informe / entrega'], ['ordenes','Órdenes'],
   ['medicos','Médicos'], ['pedidos','Pedido de insumos'], ['historial-pedidos','Historial de pedidos'],
   ['reportes','Reportes'], ['catalogo','Catálogo de pruebas'], ['catalogo-insumos','Catálogo de insumos'],
-  ['laboratorio','Laboratorio'], ['usuarios','Usuarios'], ['bitacora','Bitácora']
+  ['laboratorio','Laboratorio'], ['usuarios','Usuarios'], ['bitacora','Bitácora'], ['respaldo','Respaldo']
 ];
 function vistaInicial() {
   if (!sesion) return 'pacientes';
@@ -723,6 +724,7 @@ function render() {
       ['laboratorio','Laboratorio', null],
       ['usuarios','Usuarios', null],
       ['bitacora','Bitácora', null],
+      ['respaldo','Respaldo', null],
     ]},
     { dividerBefore: true, items: [
       ['mi-cuenta','Mi cuenta', null],
@@ -815,6 +817,7 @@ function renderView() {
   if (view === 'reportes') return viewReportes();
   if (view === 'catalogo') return viewCatalogo();
   if (view === 'laboratorio') return viewLaboratorio();
+  if (view === 'respaldo') return viewRespaldo();
   if (view === 'usuarios') return viewUsuarios();
   if (view === 'bitacora') return viewBitacora();
   if (view === 'pedidos') return viewPedidos();
@@ -982,6 +985,19 @@ function viewLaboratorio() {
         <p class="refbox">Se usa solo cuando marcas "Usar firma electrónica" en el informe final. Ideal: fondo blanco o transparente, imagen recortada de cerca a la firma y el sello.</p>
         <button class="btn" type="submit">Guardar datos</button>
       </form>
+    </div>
+  `;
+}
+
+function viewRespaldo() {
+  return `
+    <h1>Respaldo</h1>
+    <p class="lead">Descarga una copia completa de todos los datos de LabSys en un solo archivo. Guárdala en un lugar seguro (tu computadora, Google Drive, etc.) — no reemplaza tener cuidado al borrar datos, pero te da un punto al cual volver si algo sale mal.</p>
+    <div class="card">
+      <h2>Respaldo completo</h2>
+      <p class="refbox">Incluye: pacientes, médicos, órdenes y resultados, catálogo de pruebas, insumos y pedidos, datos del laboratorio, usuarios (sin contraseñas) y bitácora. No incluye contraseñas ni el código del sistema.</p>
+      <button class="btn" id="btn-exportar-todo">Descargar respaldo completo</button>
+      <p id="respaldo-estado" class="refbox" style="margin-top:10px;"></p>
     </div>
   `;
 }
@@ -2648,6 +2664,35 @@ function attachHandlers() {
     toast('Orden #' + String(orden.id).padStart(4,'0') + ' creada con ' + checks.length + ' pruebas');
     logAccion('Creó orden', 'Folio #' + String(orden.id).padStart(4,'0') + ' — ' + checks.length + ' pruebas');
     setView('captura', orden.id);
+  });
+
+  const btnExportarTodo = document.getElementById('btn-exportar-todo');
+  if (btnExportarTodo) btnExportarTodo.addEventListener('click', async () => {
+    const estado = document.getElementById('respaldo-estado');
+    btnExportarTodo.disabled = true;
+    estado.textContent = 'Generando respaldo, esto puede tardar unos segundos...';
+    try {
+      const tablas = ['categorias', 'pruebas', 'valores_referencia', 'laboratorio_config', 'pacientes', 'medicos', 'ordenes', 'orden_detalle', 'insumos', 'pedidos_insumos', 'perfiles', 'bitacora'];
+      const resultados = await Promise.all(tablas.map(t => supabase.from(t).select('*')));
+      const errorTabla = resultados.findIndex(r => r.error);
+      if (errorTabla !== -1) { estado.textContent = 'Error al leer ' + tablas[errorTabla] + ': ' + resultados[errorTabla].error.message; btnExportarTodo.disabled = false; return; }
+      const respaldo = { generado_en: new Date().toISOString(), generado_por: sesion.correo };
+      tablas.forEach((t, i) => { respaldo[t] = resultados[i].data || []; });
+      const blob = new Blob([JSON.stringify(respaldo, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'labsys-respaldo-' + new Date().toISOString().slice(0,10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      estado.textContent = 'Respaldo descargado correctamente.';
+      logAccion('Exportó respaldo completo', '');
+    } catch (e) {
+      estado.textContent = 'Error inesperado: ' + e.message;
+    }
+    btnExportarTodo.disabled = false;
   });
 
   const btnGuardarCaptura = document.getElementById('btn-guardar-captura');
