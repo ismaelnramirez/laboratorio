@@ -212,6 +212,12 @@
   display: flex; align-items: center; border-radius: 50%; margin-left: 2px;
 }
 #labsys-root .user-chip-logout:hover { background: var(--danger-light); color: var(--danger); }
+#labsys-root .user-chip-backup {
+  border: none; background: none; cursor: pointer; color: var(--muted); padding: 7px;
+  display: flex; align-items: center; border-radius: 50%;
+}
+#labsys-root .user-chip-backup:hover { background: var(--primary-light); color: var(--primary-dark); }
+#labsys-root .user-chip-backup:disabled { opacity: .5; cursor: wait; }
 @media (max-width: 640px) { #labsys-root .user-chip-info { display: none; } }
 #labsys-root .nav { display: flex; flex-direction: column; }
 @media print {
@@ -790,6 +796,10 @@ function render() {
         <div class="user-chip-name">${sesion.nombre}</div>
         <div class="user-chip-role">${sesion.rol}</div>
       </div>
+      ${puedeVer('respaldo') ? `
+      <button class="user-chip-backup" id="btn-backup-chip" onclick="labsysExportarBackup()" title="Descargar backup completo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>` : ''}
       <button class="user-chip-logout" onclick="labsysLogout()" title="Cerrar sesión">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
@@ -2729,16 +2739,21 @@ function attachHandlers() {
     setView('captura', orden.id);
   });
 
-  const btnExportarTodo = document.getElementById('btn-exportar-todo');
-  if (btnExportarTodo) btnExportarTodo.addEventListener('click', async () => {
+  window.labsysExportarBackup = async function() {
+    const btn = document.getElementById('btn-exportar-todo') || document.getElementById('btn-backup-chip');
     const estado = document.getElementById('respaldo-estado');
-    btnExportarTodo.disabled = true;
-    estado.textContent = 'Generando respaldo, esto puede tardar unos segundos...';
+    if (btn) btn.disabled = true;
+    if (estado) estado.textContent = 'Generando respaldo, esto puede tardar unos segundos...';
     try {
       const tablas = ['categorias', 'pruebas', 'valores_referencia', 'laboratorio_config', 'pacientes', 'medicos', 'ordenes', 'orden_detalle', 'insumos', 'pedidos_insumos', 'perfiles', 'bitacora'];
       const resultados = await Promise.all(tablas.map(t => supabase.from(t).select('*')));
       const errorTabla = resultados.findIndex(r => r.error);
-      if (errorTabla !== -1) { estado.textContent = 'Error al leer ' + tablas[errorTabla] + ': ' + resultados[errorTabla].error.message; btnExportarTodo.disabled = false; return; }
+      if (errorTabla !== -1) {
+        const msg = 'Error al leer ' + tablas[errorTabla] + ': ' + resultados[errorTabla].error.message;
+        if (estado) estado.textContent = msg; else toast(msg);
+        if (btn) btn.disabled = false;
+        return;
+      }
       const respaldo = { generado_en: new Date().toISOString(), generado_por: sesion.correo };
       tablas.forEach((t, i) => { respaldo[t] = resultados[i].data || []; });
       const blob = new Blob([JSON.stringify(respaldo, null, 2)], { type: 'application/json' });
@@ -2750,13 +2765,16 @@ function attachHandlers() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      estado.textContent = 'Respaldo descargado correctamente.';
+      if (estado) estado.textContent = 'Respaldo descargado correctamente.'; else toast('Respaldo descargado correctamente');
       logAccion('Exportó respaldo completo', '');
     } catch (e) {
-      estado.textContent = 'Error inesperado: ' + e.message;
+      const msg = 'Error inesperado: ' + e.message;
+      if (estado) estado.textContent = msg; else toast(msg);
     }
-    btnExportarTodo.disabled = false;
-  });
+    if (btn) btn.disabled = false;
+  };
+  const btnExportarTodo = document.getElementById('btn-exportar-todo');
+  if (btnExportarTodo) btnExportarTodo.addEventListener('click', labsysExportarBackup);
 
   const btnGuardarCaptura = document.getElementById('btn-guardar-captura');
   if (btnGuardarCaptura) btnGuardarCaptura.addEventListener('click', async () => {
