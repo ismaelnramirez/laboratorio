@@ -458,9 +458,12 @@ async function fetchTodo() {
   PRUEBAS = (pru.data || []).map(p => ({
     id: p.id, categoria_id: p.categoria_id, nombre: p.nombre, unidad: p.unidad, tipo: p.tipo, activo: p.activo,
     opciones: p.opciones || null, subgrupo: p.subgrupo || null, sugerencias: p.sugerencias || null,
+    dato_adicional_nombre: p.dato_adicional_nombre || null,
+    usa_bandas: !!p.usa_bandas,
     ref: (p.valores_referencia || []).map(r => ({
       sexo: r.sexo, min: r.valor_min ?? undefined, max: r.valor_max ?? undefined,
-      texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined
+      texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined,
+      smin: r.semana_min ?? undefined, smax: r.semana_max ?? undefined, esNormal: !!r.es_normal
     }))
   }));
   laboratorio = lab.data || {};
@@ -652,7 +655,17 @@ function edadTexto(fnac) {
   return a + ' años';
 }
 
-function refFor(prueba, paciente) {
+function refFor(prueba, paciente, datoAdicional, valorResultado) {
+  if (prueba.usa_bandas) {
+    if (valorResultado === undefined || valorResultado === null || valorResultado === '' || isNaN(Number(valorResultado))) return null;
+    const val = Number(valorResultado);
+    return prueba.ref.find(r => (r.min === undefined || val >= r.min) && (r.max === undefined || val <= r.max)) || null;
+  }
+  if (prueba.dato_adicional_nombre) {
+    if (datoAdicional === undefined || datoAdicional === null || datoAdicional === '') return null;
+    const val = Number(datoAdicional);
+    return prueba.ref.find(r => r.smin !== undefined && r.smax !== undefined && val >= r.smin && val <= r.smax) || null;
+  }
   const sexo = paciente ? paciente.sexo : 'A';
   const pacEdad = paciente ? edad(paciente.fnac) : null;
   const bySexo = prueba.ref.filter(r => r.sexo === sexo);
@@ -1371,6 +1384,43 @@ function viewCatalogoForm() {
 
         <div id="prueba-ref-block" style="margin-top:10px;">
           <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="prueba-dato-adicional-check" ${p && p.dato_adicional_nombre ? 'checked' : ''} style="width:auto;margin:0;">
+            Esta prueba necesita un dato adicional para elegir el rango (ej. semanas de embarazo)
+          </label>
+          <div id="prueba-dato-adicional-block" style="margin:8px 0;${p && p.dato_adicional_nombre ? '' : 'display:none;'}">
+            <label>Nombre del dato adicional (se pedirá al capturar el resultado)</label>
+            <input type="text" id="prueba-dato-adicional-nombre" placeholder="Ej. Semanas desde el último período menstrual" value="${p && p.dato_adicional_nombre ? p.dato_adicional_nombre : ''}">
+            <label style="margin-top:10px;">Tabla de rangos por valor</label>
+            <input type="hidden" id="ref-por-dato-data" value="${escapeAttr(JSON.stringify((p ? p.ref : []).filter(r => r.smin !== undefined).map(r => ({ smin: r.smin, smax: r.smax, min: r.min, max: r.max, texto: r.texto }))))}">
+            <div id="ref-por-dato-filas" class="chips-box"></div>
+            <div class="row" style="margin-top:8px;">
+              <div><label>Desde</label><input type="number" step="any" id="ref-pd-smin"></div>
+              <div><label>Hasta</label><input type="number" step="any" id="ref-pd-smax"></div>
+              <div><label>Valor mínimo</label><input type="number" step="any" id="ref-pd-min"></div>
+              <div><label>Valor máximo</label><input type="number" step="any" id="ref-pd-max"></div>
+            </div>
+            <button type="button" class="btn small secondary" id="btn-agregar-ref-pd">Agregar fila</button>
+          </div>
+
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="prueba-usa-bandas-check" ${p && p.usa_bandas ? 'checked' : ''} style="width:auto;margin:0;">
+            Esta prueba tiene varias bandas según el mismo resultado (ej. Normal / Prediabetes / Diabetes)
+          </label>
+          <div id="prueba-bandas-block" style="margin:8px 0;${p && p.usa_bandas ? '' : 'display:none;'}">
+            <label>Tabla de bandas (marca cuál cuenta como "Normal" — las demás se marcan en rojo, fuera de rango)</label>
+            <input type="hidden" id="ref-bandas-data" value="${escapeAttr(JSON.stringify((p && p.usa_bandas ? p.ref : []).map(r => ({ min: r.min, max: r.max, texto: r.texto, normal: !!r.esNormal }))))}">
+            <div id="ref-bandas-filas" class="chips-box"></div>
+            <div class="row" style="margin-top:8px;align-items:flex-end;">
+              <div><label>Valor mínimo</label><input type="number" step="any" id="ref-b-min"></div>
+              <div><label>Valor máximo</label><input type="number" step="any" id="ref-b-max"></div>
+              <div style="flex:2"><label>Etiqueta</label><input type="text" id="ref-b-texto" placeholder="Ej. Prediabetes"></div>
+              <div><label style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><input type="checkbox" id="ref-b-normal" style="width:auto;margin:0;"> Es normal</label></div>
+            </div>
+            <button type="button" class="btn small secondary" id="btn-agregar-ref-b">Agregar banda</button>
+          </div>
+
+          <div id="prueba-ref-normal" style="${(p && (p.dato_adicional_nombre || p.usa_bandas)) ? 'display:none;' : ''}">
+          <label style="display:flex;align-items:center;gap:8px;">
             <input type="checkbox" id="prueba-distinto-sexo" ${distintoSexo?'checked':''} style="width:auto;margin:0;">
             El rango de referencia es distinto para hombres y mujeres
           </label>
@@ -1397,6 +1447,7 @@ function viewCatalogoForm() {
               <div><label>Máximo</label><input type="number" step="any" id="ref-f-max" value="${refF && refF.max!==undefined ? refF.max : ''}"></div>
             </div>
             <input type="text" id="ref-f-texto" placeholder="Texto de referencia (opcional)" value="${refF && refF.texto ? refF.texto : ''}">
+          </div>
           </div>
         </div>
 
@@ -1553,7 +1604,7 @@ function viewCaptura() {
           <table><thead><tr><th>Prueba</th><th>Resultado</th><th>Nota</th><th>Referencia</th><th></th></tr></thead><tbody>
             ${agruparPorSubgrupo(g.items).map(sg => (sg.subgrupo ? '<tr class="subgrupo-row"><td colspan="5">'+sg.subgrupo+'</td></tr>' : '') + sg.items.map(d => {
               const p = pruebaById(d.prueba_id);
-              const ref = refFor(p, pac);
+              const ref = refFor(p, pac, d.dato_adicional_valor, d.valor_numerico);
               const oorStyle = d.fuera_de_rango ? ' style="border-color:var(--danger);background:var(--danger-light);color:var(--danger);font-weight:600;"' : '';
               let inputHtml;
               if (p.opciones && p.opciones.length) {
@@ -1593,7 +1644,7 @@ function viewCaptura() {
               }
               return `<tr>
                 <td>${p.nombre}${notaEspecialPrueba(p) ? '<div class="nota-especial">'+notaEspecialPrueba(p)+'</div>' : ''}</td>
-                <td>${inputHtml} ${p.unidad ? '<span class="refbox">'+p.unidad+'</span>' : ''}
+                <td>${p.dato_adicional_nombre ? `<div class="refbox" style="margin-bottom:2px;">${p.dato_adicional_nombre}</div><input type="number" step="any" class="cap-dato-adicional" data-id="${d.prueba_id}" placeholder="${p.dato_adicional_nombre}" value="${d.dato_adicional_valor ?? ''}" style="margin-bottom:6px;width:100%;" ${d.estado==='validada'?'disabled':''}>` : ''}${inputHtml} ${p.unidad ? '<span class="refbox">'+p.unidad+'</span>' : ''}
                   ${d.fuera_de_rango ? '<div class="refbox oor">⚠️ fuera de rango</div>' : ''}</td>
                 <td><input type="text" class="cap-nota" data-id="${d.prueba_id}" value="${d.observaciones ?? ''}" placeholder="Opcional" ${d.estado==='validada'?'disabled':''}></td>
                 <td class="refbox">${refTexto(ref)}</td>
@@ -1635,7 +1686,7 @@ function viewCapturaPDF() {
         <table class="informe-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th></tr></thead><tbody>
           ${agruparPorSubgrupo(g.items).map(sg => (sg.subgrupo ? '<tr class="subgrupo-row"><td colspan="4">'+sg.subgrupo+'</td></tr>' : '') + sg.items.map(d => {
             const p = pruebaById(d.prueba_id);
-            const ref = refFor(p, pac);
+            const ref = refFor(p, pac, d.dato_adicional_valor, d.valor_numerico);
             const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
             return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}${notaEspecialPrueba(p) ? '<div class="nota-especial">'+notaEspecialPrueba(p)+'</div>' : ''}</td><td style="white-space:pre-line;" class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
           }).join('')).join('')}
@@ -1687,7 +1738,7 @@ function viewValidacion() {
           <table class="valida-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th><th>Capturado por</th></tr></thead><tbody>
             ${agruparPorSubgrupo(g.items).map(sg => (sg.subgrupo ? '<tr class="subgrupo-row"><td colspan="5">'+sg.subgrupo+'</td></tr>' : '') + sg.items.map(d => {
               const p = pruebaById(d.prueba_id);
-              const ref = refFor(p, pac);
+              const ref = refFor(p, pac, d.dato_adicional_valor, d.valor_numerico);
               const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
               return `<tr>
                 <td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}${notaEspecialPrueba(p) ? '<div class="nota-especial">'+notaEspecialPrueba(p)+'</div>' : ''}</td>
@@ -1793,7 +1844,7 @@ function viewInforme() {
         <table class="informe-table"><thead><tr><th>Prueba</th><th>Resultado</th><th>Unidad</th><th>Referencia</th></tr></thead><tbody>
           ${agruparPorSubgrupo(g.items).map(sg => (sg.subgrupo ? '<tr class="subgrupo-row"><td colspan="4">'+sg.subgrupo+'</td></tr>' : '') + sg.items.map(d => {
             const p = pruebaById(d.prueba_id);
-            const ref = refFor(p, pac);
+            const ref = refFor(p, pac, d.dato_adicional_valor, d.valor_numerico);
             const val = p.tipo === 'numerico' ? (d.valor_numerico ?? '—') : (d.valor_texto ?? '—');
             return `<tr><td>${p.nombre}${d.observaciones ? '<div class="refbox">'+d.observaciones+'</div>' : ''}${notaEspecialPrueba(p) ? '<div class="nota-especial">'+notaEspecialPrueba(p)+'</div>' : ''}</td><td style="white-space:pre-line;" class="${d.fuera_de_rango?'oor':''}">${d.fuera_de_rango?'⚠️ ':''}${val}</td><td>${p.unidad||'—'}</td><td>${refTexto(ref)}</td></tr>`;
           }).join('')).join('')}
@@ -2421,6 +2472,86 @@ function attachHandlers() {
     document.getElementById('ref-doble').style.display = chkSexo.checked ? 'block' : 'none';
   });
 
+  const chkDatoAdicional = document.getElementById('prueba-dato-adicional-check');
+  const chkBandas = document.getElementById('prueba-usa-bandas-check');
+  const actualizarModoRef = () => {
+    document.getElementById('prueba-dato-adicional-block').style.display = chkDatoAdicional.checked ? 'block' : 'none';
+    document.getElementById('prueba-bandas-block').style.display = chkBandas.checked ? 'block' : 'none';
+    document.getElementById('prueba-ref-normal').style.display = (chkDatoAdicional.checked || chkBandas.checked) ? 'none' : 'block';
+  };
+  if (chkDatoAdicional) chkDatoAdicional.addEventListener('change', () => {
+    if (chkDatoAdicional.checked) chkBandas.checked = false;
+    actualizarModoRef();
+  });
+  if (chkBandas) chkBandas.addEventListener('change', () => {
+    if (chkBandas.checked) chkDatoAdicional.checked = false;
+    actualizarModoRef();
+  });
+
+  const refBandasData = document.getElementById('ref-bandas-data');
+  if (refBandasData) {
+    let filasB = [];
+    try { filasB = JSON.parse(refBandasData.value) || []; } catch { filasB = []; }
+    const filasBBox = document.getElementById('ref-bandas-filas');
+    const pintarFilasB = () => {
+      refBandasData.value = JSON.stringify(filasB);
+      filasBBox.innerHTML = filasB.length
+        ? filasB.map((f, i) => `<div class="refbox" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+            <span>${f.min ?? '—'} a ${f.max ?? '—'}: <strong style="color:inherit;">${f.texto}</strong>${f.normal ? ' (Normal)' : ''}</span>
+            <button type="button" data-quitar-fila-b="${i}" class="btn small secondary">Quitar</button>
+          </div>`).join('')
+        : '<span class="chips-empty">Todavía no hay bandas agregadas.</span>';
+      filasBBox.querySelectorAll('[data-quitar-fila-b]').forEach(btn => {
+        btn.addEventListener('click', () => { filasB.splice(Number(btn.dataset.quitarFilaB), 1); pintarFilasB(); });
+      });
+    };
+    pintarFilasB();
+    const btnAgregarFilaB = document.getElementById('btn-agregar-ref-b');
+    if (btnAgregarFilaB) btnAgregarFilaB.addEventListener('click', () => {
+      const min = document.getElementById('ref-b-min').value;
+      const max = document.getElementById('ref-b-max').value;
+      const texto = document.getElementById('ref-b-texto').value.trim();
+      const normal = document.getElementById('ref-b-normal').checked;
+      if (!texto) { toast('Escribe la etiqueta de la banda (ej. Prediabetes)'); return; }
+      if (min === '' && max === '') { toast('Completa al menos un valor mínimo o máximo'); return; }
+      filasB.push({ min: min !== '' ? Number(min) : undefined, max: max !== '' ? Number(max) : undefined, texto, normal });
+      ['ref-b-min','ref-b-max','ref-b-texto'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('ref-b-normal').checked = false;
+      pintarFilasB();
+    });
+  }
+
+  const refPdData = document.getElementById('ref-por-dato-data');
+  if (refPdData) {
+    let filasPd = [];
+    try { filasPd = JSON.parse(refPdData.value) || []; } catch { filasPd = []; }
+    const filasBox = document.getElementById('ref-por-dato-filas');
+    const pintarFilasPd = () => {
+      refPdData.value = JSON.stringify(filasPd);
+      filasBox.innerHTML = filasPd.length
+        ? filasPd.map((f, i) => `<div class="refbox" style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+            <span>${f.smin} - ${f.smax}: ${f.min ?? '—'} a ${f.max ?? '—'}</span>
+            <button type="button" data-quitar-fila-pd="${i}" class="btn small secondary">Quitar</button>
+          </div>`).join('')
+        : '<span class="chips-empty">Todavía no hay filas en la tabla de rangos.</span>';
+      filasBox.querySelectorAll('[data-quitar-fila-pd]').forEach(btn => {
+        btn.addEventListener('click', () => { filasPd.splice(Number(btn.dataset.quitarFilaPd), 1); pintarFilasPd(); });
+      });
+    };
+    pintarFilasPd();
+    const btnAgregarFilaPd = document.getElementById('btn-agregar-ref-pd');
+    if (btnAgregarFilaPd) btnAgregarFilaPd.addEventListener('click', () => {
+      const smin = document.getElementById('ref-pd-smin').value;
+      const smax = document.getElementById('ref-pd-smax').value;
+      const min = document.getElementById('ref-pd-min').value;
+      const max = document.getElementById('ref-pd-max').value;
+      if (smin === '' || smax === '') { toast('Completa "Desde" y "Hasta"'); return; }
+      filasPd.push({ smin: Number(smin), smax: Number(smax), min: min !== '' ? Number(min) : undefined, max: max !== '' ? Number(max) : undefined });
+      ['ref-pd-smin','ref-pd-smax','ref-pd-min','ref-pd-max'].forEach(id => document.getElementById(id).value = '');
+      pintarFilasPd();
+    });
+  }
+
   const sugData = document.getElementById('prueba-sugerencias-data');
   if (sugData) {
     let sugerenciasTemp = [];
@@ -2478,8 +2609,21 @@ function attachHandlers() {
     } else categoriaId = Number(categoriaId);
 
     const tipo = fd.get('tipo');
+    const usaDatoAdicional = document.getElementById('prueba-dato-adicional-check') && document.getElementById('prueba-dato-adicional-check').checked;
+    const datoAdicionalNombre = usaDatoAdicional ? document.getElementById('prueba-dato-adicional-nombre').value.trim() : null;
+    if (usaDatoAdicional && !datoAdicionalNombre) { toast('Escribe el nombre del dato adicional'); return; }
+    const usaBandas = document.getElementById('prueba-usa-bandas-check') && document.getElementById('prueba-usa-bandas-check').checked;
     let refRows = [];
-    if (tipo !== 'texto') {
+    if (usaDatoAdicional) {
+      let filasPd = [];
+      try { filasPd = JSON.parse(document.getElementById('ref-por-dato-data').value) || []; } catch { filasPd = []; }
+      refRows = filasPd.map(f => ({ sexo: 'A', semana_min: f.smin, semana_max: f.smax, valor_min: f.min ?? null, valor_max: f.max ?? null, texto_referencia: null }));
+    } else if (usaBandas) {
+      let filasB = [];
+      try { filasB = JSON.parse(document.getElementById('ref-bandas-data').value) || []; } catch { filasB = []; }
+      if (filasB.length === 0) { toast('Agrega al menos una banda'); return; }
+      refRows = filasB.map(f => ({ sexo: 'A', valor_min: f.min ?? null, valor_max: f.max ?? null, texto_referencia: f.texto, es_normal: !!f.normal }));
+    } else if (tipo !== 'texto') {
       if (document.getElementById('prueba-distinto-sexo').checked) {
         const mMin = document.getElementById('ref-m-min').value, mMax = document.getElementById('ref-m-max').value, mTxt = document.getElementById('ref-m-texto').value.trim();
         const fMin = document.getElementById('ref-f-min').value, fMax = document.getElementById('ref-f-max').value, fTxt = document.getElementById('ref-f-texto').value.trim();
@@ -2502,11 +2646,11 @@ function attachHandlers() {
     let pruebaId;
     if (idField) {
       pruebaId = Number(idField);
-      const { error } = await supabase.from('pruebas').update({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null }).eq('id', pruebaId);
+      const { error } = await supabase.from('pruebas').update({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null, dato_adicional_nombre: datoAdicionalNombre, usa_bandas: usaBandas }).eq('id', pruebaId);
       if (error) { toast('Error: ' + error.message); return; }
       await supabase.from('valores_referencia').delete().eq('prueba_id', pruebaId);
     } else {
-      const { data, error } = await supabase.from('pruebas').insert({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null }).select().single();
+      const { data, error } = await supabase.from('pruebas').insert({ categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null, dato_adicional_nombre: datoAdicionalNombre, usa_bandas: usaBandas }).select().single();
       if (error) { toast('Error: ' + error.message); return; }
       pruebaId = data.id;
     }
@@ -2517,10 +2661,11 @@ function attachHandlers() {
     const { data: freshRef } = await supabase.from('valores_referencia').select('*').eq('prueba_id', pruebaId);
     const mappedRef = (freshRef || []).map(r => ({
       sexo: r.sexo, min: r.valor_min ?? undefined, max: r.valor_max ?? undefined,
-      texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined
+      texto: r.texto_referencia ?? undefined, amin: r.edad_min ?? undefined, amax: r.edad_max ?? undefined,
+      smin: r.semana_min ?? undefined, smax: r.semana_max ?? undefined, esNormal: !!r.es_normal
     }));
     const idx = PRUEBAS.findIndex(p => p.id === pruebaId);
-    const pruebaObj = { id: pruebaId, categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true, ref: mappedRef, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null };
+    const pruebaObj = { id: pruebaId, categoria_id: categoriaId, nombre: fd.get('nombre'), unidad: fd.get('unidad'), tipo, activo: true, ref: mappedRef, sugerencias: sugerenciasGuardar.length ? sugerenciasGuardar : null, dato_adicional_nombre: datoAdicionalNombre, usa_bandas: usaBandas };
     if (idx >= 0) PRUEBAS[idx] = { ...PRUEBAS[idx], ...pruebaObj }; else PRUEBAS.push(pruebaObj);
     toast(idField ? 'Prueba actualizada' : 'Prueba agregada al catálogo');
     logAccion(idField ? 'Editó prueba del catálogo' : 'Agregó prueba al catálogo', pruebaObj.nombre);
@@ -2786,16 +2931,21 @@ function attachHandlers() {
       if (d.estado === 'validada') continue;
       const inp = document.querySelector(`.cap-input[data-id="${d.prueba_id}"]`);
       const notaInp = document.querySelector(`.cap-nota[data-id="${d.prueba_id}"]`);
+      const datoAdicionalInp = document.querySelector(`.cap-dato-adicional[data-id="${d.prueba_id}"]`);
       if (!inp) continue;
       const nota = notaInp ? notaInp.value.trim() : '';
+      const datoAdicionalValor = datoAdicionalInp && datoAdicionalInp.value !== '' ? Number(datoAdicionalInp.value) : null;
       const patch = {};
       let cambioResultado = false;
+      if (datoAdicionalInp) patch.dato_adicional_valor = datoAdicionalValor;
       if (inp.value !== '') {
         const p = pruebaById(d.prueba_id);
         if (p.tipo === 'numerico') {
           patch.valor_numerico = Number(inp.value);
-          const ref = refFor(p, pac);
-          patch.fuera_de_rango = !!(ref && ((ref.min !== undefined && patch.valor_numerico < ref.min) || (ref.max !== undefined && patch.valor_numerico > ref.max)));
+          const ref = refFor(p, pac, datoAdicionalInp ? datoAdicionalValor : d.dato_adicional_valor, patch.valor_numerico);
+          patch.fuera_de_rango = p.usa_bandas
+            ? !!(ref && !ref.esNormal)
+            : !!(ref && ((ref.min !== undefined && patch.valor_numerico < ref.min) || (ref.max !== undefined && patch.valor_numerico > ref.max)));
         } else {
           patch.valor_texto = inp.value;
           patch.fuera_de_rango = false;
@@ -2806,7 +2956,7 @@ function attachHandlers() {
         cambioResultado = true;
       }
       patch.observaciones = nota || null;
-      if (!cambioResultado && nota === (d.observaciones || '')) continue;
+      if (!cambioResultado && nota === (d.observaciones || '') && !datoAdicionalInp) continue;
       const { error } = await supabase.from('orden_detalle').update(patch).eq('id', d.id);
       if (error) { toast('Error: ' + error.message); continue; }
       Object.assign(d, patch);
